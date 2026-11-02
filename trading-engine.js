@@ -688,11 +688,150 @@
     '3.01': 'Delisting Hinweis', '4.02': 'Frühere Zahlen nicht verlässlich', '5.02': 'Wechsel im Management',
   };
 
+  // ---------- Backtest: Ausbruch aus der Eroeffnungsspanne ueber viele Werte ----------
+  /**
+   * Ein Trade je Wert und Tag nach der Einstiegsregel, mit realistischen Ausfuehrungen:
+   * Luecke durch den Stopp fuellt zum Eroeffnungskurs der Kerze, Stopp und Ziel in
+   * derselben Kerze zaehlen als Stopp, Schlupf je Stueck bei Markt und Stopp Orders,
+   * Gebuehr je Order. Groesse nach Max Verlust, Positionsgrenze und Max Order.
+   * barsBySymbol: { SYM: Yahoo 5 Minuten Kerzen }.
+   */
+  function backtestORB(barsBySymbol, optsIn = {}) {
+    const cfg = { ...DEFAULT_CONFIG, ...(optsIn.config || {}) };
+    const o = {
+      orMinutes: cfg.or_minutes || 15, stopRule: 'or-mid', stopValue: null, targetR: 2, minVolumeX: null,
+      slippage: 0.02, commission: 0, applyDayLimits: true, nowMs: Date.now(), ...optsIn,
+    };
+    const today = ny(o.nowMs).date;
+    const clockToday = marketClock(o.nowMs);
+    const noBefore = hm(cfg.no_entries_before), noAfter0 = hm(cfg.no_entries_after), flat0 = hm(cfg.flat_by);
+    const budget = +cfg.budget;
+    const candidates = [];
+    const info = { symbols: 0, sessions: 0, noTrigger: 0, tooSmall: 0, stopInvalid: 0, days: new Set() };
+
+    for (const sym of Object.keys(barsBySymbol)) {
+      const bars = regularOnly(normalizeBars(barsBySymbol[sym], 5));
+      if (!bars.length) continue;
+      info.symbols++;
+      for (const [date, list] of groupByDate(bars)) {
+        if (date === today && clockToday.state !== 'post') continue; // laufender Tag zaehlt nicht
+        const closeMin = closeMinOf(date);
+        const need = (closeMin - OPEN_MIN) / 5;
+        if (list.length !== need || !list.every((b, i) => b.min === OPEN_MIN + 5 * i)) continue; // Luecken: Halt oder duenn
+        info.sessions++; info.days.add(date);
+        const nOr = o.orMinutes / 5;
+        const orBars = list.slice(0, nOr);
+        const orHigh = Math.max(...orBars.map((b) => b.h)), orLow = Math.min(...orBars.map((b) => b.l));
+        const avgVol = orBars.reduce((a, b) => a + b.v, 0) / nOr;
+        const cutoff = closeMin === 780 ? Math.min(noAfter0, 750) : noAfter0;
+        const flatMin = closeMin === 780 ? Math.min(flat0, 775) : flat0;
+        let ei = -1;
+        for (let i = nOr; i < list.length; i++) {
+          const b = list[i], closeT = b.min + 5;
+          if (closeT < noBefore) continue;
+          if (closeT > cutoff) break;
+          if (!(b.c > orHigh)) continue;
+          if (o.minVolumeX && !(avgVol > 0 && b.v / avgVol >= o.minVolumeX)) continue;
+          ei = i; break;
+        }
+        if (ei < 0) { info.noTrigger++; continue; }
+        const eb = list[ei];
+        const entry = eb.c + o.slippage; // Marktorder nach dem Schluss der Signalkerze
+        let stop;
+        if (o.stopRule === 'or-mid') stop = floorCent((orHigh + orLow) / 2);
+        else if (o.stopRule === 'or-low') stop = floorCent(orLow);
+        else if (o.stopRule === 'pct') stop = floorCent(entry * (1 - o.stopValue / 100));
+        else if (o.stopRule === 'atr') { const a = atr(list.slice(0, ei + 1), 14); stop = floorCent(entry - o.stopValue * a.atr); }
+        if (!(stop < entry) || entry - stop < entry * 0.0005) { info.stopInvalid++; continue; }
+        const risk = entry - stop;
+        const target = halfUpCent(entry + o.targetR * risk);
+        const qty = Math.max(0, Math.min(
+          Math.floor(cfg.max_loss_per_trade_usd / risk + 1e-9),
+          Math.floor((budget * cfg.max_position_pct / 100) / entry + 1e-9),
+          Math.floor(cfg.max_order_usd / entry + 1e-9),
+          Math.floor((budget * (1 - cfg.cash_buffer_pct / 100)) / entry + 1e-9),
+        ));
+        if (qty < 1) { info.tooSmall++; continue; }
+
+        let exit = null, reason = null, exitMin = null;
+        for (let i = ei + 1; i < list.length; i++) {
+          const b = list[i];
+          if (b.min + 5 > flatMin) break;
+          if (b.o <= stop) { exit = b.o - o.slippage; reason = 'gap'; exitMin = b.min; break; }
+          if (b.l <= stop) { exit = stop - o.slippage; reason = 'stop'; exitMin = b.min + 5; break; }
+          if (b.o >= target) { exit = b.o; reason = 'target'; exitMin = b.min; break; }
+          if (b.h >= target) { exit = target; reason = 'target'; exitMin = b.min + 5; break; }
+        }
+        if (exit == null) {
+          const lastIn = list.filter((b) => b.min + 5 <= flatMin).pop();
+          exit = lastIn.c - o.slippage; reason = 'flat'; exitMin = lastIn.min + 5;
+        }
+        const costs = 2 * o.commission + 2 * o.slippage * qty;
+        const pnl = qty * (exit - entry) - 2 * o.commission;
+        candidates.push({
+          symbol: sym, date, entryMin: eb.min + 5, exitMin, entry: round2(entry), stop, target, exit: round2(exit), qty,
+          risk: round2(risk), maxLoss: round2(qty * risk), pnl: round2(pnl), r: pnl / (qty * risk), reason, costs: round2(costs),
+          orHigh, orLow,
+        });
+      }
+    }
+
+    // Tagesgrenzen wie bei der Risiko Pruefung, in zeitlicher Reihenfolge
+    candidates.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.entryMin - b.entryMin || (a.symbol < b.symbol ? -1 : 1)));
+    const trades = [];
+    const skipped = { tradesPerDay: 0, dailyLoss: 0 };
+    for (const c of candidates) {
+      if (o.applyDayLimits) {
+        const sameDay = trades.filter((t) => t.date === c.date);
+        if (sameDay.length >= cfg.max_trades_per_day) { skipped.tradesPerDay++; continue; }
+        const realizedLoss = sameDay.filter((t) => t.exitMin <= c.entryMin).reduce((a, t) => a + Math.max(0, -t.pnl), 0);
+        const openRisk = sameDay.filter((t) => t.exitMin > c.entryMin).reduce((a, t) => a + t.maxLoss, 0);
+        if (realizedLoss + openRisk + c.maxLoss > cfg.max_daily_loss_usd + 1e-9) { skipped.dailyLoss++; continue; }
+      }
+      trades.push(c);
+    }
+
+    // Kennzahlen
+    let equity = 0, peak = 0, maxDD = 0;
+    const curve = [{ i: 0, equity: 0 }];
+    trades.forEach((t, i) => {
+      equity += t.pnl; peak = Math.max(peak, equity); maxDD = Math.max(maxDD, peak - equity);
+      curve.push({ i: i + 1, equity, date: t.date });
+    });
+    const wins = trades.filter((t) => t.pnl > 0), losses = trades.filter((t) => t.pnl <= 0);
+    const sum = (arr, f) => arr.reduce((a, t) => a + f(t), 0);
+    const grossWin = sum(wins, (t) => t.pnl), grossLoss = -sum(losses, (t) => t.pnl);
+    const bySymbol = {};
+    for (const t of trades) {
+      const s = bySymbol[t.symbol] || (bySymbol[t.symbol] = { symbol: t.symbol, n: 0, wins: 0, pnl: 0, sumR: 0 });
+      s.n++; if (t.pnl > 0) s.wins++; s.pnl += t.pnl; s.sumR += t.r;
+    }
+    const reasons = { target: 0, stop: 0, gap: 0, flat: 0 };
+    trades.forEach((t) => { reasons[t.reason]++; });
+    const dates = [...info.days].sort();
+    const n = trades.length;
+    return {
+      ok: true, trades, curve, reasons, skipped,
+      info: { symbols: info.symbols, sessions: info.sessions, noTrigger: info.noTrigger, tooSmall: info.tooSmall, stopInvalid: info.stopInvalid, from: dates[0], to: dates[dates.length - 1], days: dates.length },
+      stats: {
+        n, wins: wins.length, losses: losses.length, winRate: n ? wins.length / n : 0,
+        totalPnl: sum(trades, (t) => t.pnl), avgPnl: n ? sum(trades, (t) => t.pnl) / n : 0,
+        avgR: n ? sum(trades, (t) => t.r) / n : 0, avgWin: wins.length ? grossWin / wins.length : 0,
+        avgLoss: losses.length ? -grossLoss / losses.length : 0, profitFactor: grossLoss > 0 ? grossWin / grossLoss : null,
+        maxDrawdown: maxDD, costs: sum(trades, (t) => t.costs),
+        best: n ? Math.max(...trades.map((t) => t.pnl)) : 0, worst: n ? Math.min(...trades.map((t) => t.pnl)) : 0,
+        breakEvenWinRate: 1 / (1 + o.targetR),
+      },
+      bySymbol: Object.values(bySymbol).sort((a, b) => b.pnl - a.pnl),
+      opts: { stopRule: o.stopRule, stopValue: o.stopValue, targetR: o.targetR, minVolumeX: o.minVolumeX, slippage: o.slippage, commission: o.commission, orMinutes: o.orMinutes, applyDayLimits: o.applyDayLimits },
+    };
+  }
+
   const api = {
     round2, floorCent, num, usd, usd0, halfUpCent, ny, marketClock, isTradingDay, closeMinOf, nextTradingDay, hm, fmtMin, fmtHM,
     normalizeBars, regularOnly, groupByDate, rsiWilder, atr, dailySetups, scanDailySymbol, SETUP_LABELS,
     entryCheck, planExit, timeMachine, verdictOf, mulberry32, sizePosition, riskCheck, bracketOutcome,
-    evaluateAlert, tagHeadline, IMPORTANT_8K, DEFAULT_CONFIG, HOLIDAYS, EARLY_CLOSE, OPEN_MIN,
+    evaluateAlert, tagHeadline, IMPORTANT_8K, DEFAULT_CONFIG, HOLIDAYS, EARLY_CLOSE, OPEN_MIN, backtestORB,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TraderEngine = api;

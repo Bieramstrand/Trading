@@ -158,6 +158,7 @@
     <button class="tab active" data-tab="home">Übersicht</button>
     <button class="tab" data-tab="scan">Scanner</button>
     <button class="tab" data-tab="trade">Trade</button>
+    <button class="tab" data-tab="bt">Backtest</button>
     <button class="tab" data-tab="news">News</button>
     <button class="tab" data-tab="facts">Zahlen</button>
     <button class="tab" data-tab="congress">Kongress</button>
@@ -309,6 +310,39 @@
       </div>
     </section>
 
+    <!-- Backtest -->
+    <section id="tab-bt" hidden>
+      <div class="card">
+        <h2>Backtest</h2>
+        <p class="small muted" style="margin-top:0">Spielt die Ausbruchsregel über alle Werte und die letzten 60 Handelstage durch (so weit reichen die freien 5 Minuten Kerzen). Mit Lücken durch den Stopp, Schlupf, Gebühren, deiner Positionsgröße und deinen Tagesgrenzen. Vergangenheit, keine Vorhersage.</p>
+        <label>Werte
+          <textarea id="btSyms" autocapitalize="characters" spellcheck="false"></textarea>
+        </label>
+        <div class="row">
+          <label>Stopp
+            <select id="btStop">
+              <option value="or-mid">Mitte der Spanne</option>
+              <option value="or-low">Tief der Spanne</option>
+              <option value="pct">Prozent unter Einstieg</option>
+              <option value="atr">ATR Vielfaches</option>
+            </select>
+          </label>
+          <label id="btStopValWrap" hidden>Wert <input class="n" id="btStopVal" inputmode="decimal" placeholder="1"></label>
+          <label>Ziel in R <input class="n" id="btR" inputmode="decimal" value="2"></label>
+          <label>Volumen × <input class="n" id="btVolX" inputmode="decimal" placeholder="aus"></label>
+        </div>
+        <div class="row">
+          <label>Schlupf je Stück $ <input class="n" id="btSlip" inputmode="decimal" value="0.02"></label>
+          <label>Gebühr je Order $ <input class="n" id="btFee" inputmode="decimal" value="0"></label>
+          <label class="check"><input type="checkbox" id="btLimits" checked> Tagesgrenzen anwenden</label>
+        </div>
+        <div class="row"><button class="btn" id="btRun">Backtest starten</button></div>
+        <div class="progress" id="btProg" hidden><div></div></div>
+        <div id="btInfo" class="small muted"></div>
+      </div>
+      <div id="btOut"></div>
+    </section>
+
     <!-- News -->
     <section id="tab-news" hidden>
       <div class="card">
@@ -440,13 +474,15 @@
     }
     async function charts(symbols, range, interval, onProgress) {
       const out = {};
-      for (let i = 0; i < symbols.length; i += 25) {
-        const part = symbols.slice(i, i + 25);
+      // Viele Tage mit kleinen Kerzen sind gross: dann weniger Werte pro Abruf (Netlify Grenze 6 MB)
+      const step = (range === '60d' || range === '1mo') && interval !== '1d' ? 4 : 25;
+      for (let i = 0; i < symbols.length; i += step) {
+        const part = symbols.slice(i, i + step);
         try {
           const j = await api('market-chart', { symbols: part.join(','), range, interval });
           Object.assign(out, j.data);
         } catch (e) { part.forEach((s) => { out[s] = { error: e.message }; }); }
-        if (onProgress) onProgress(Math.min(i + 25, symbols.length), symbols.length);
+        if (onProgress) onProgress(Math.min(i + step, symbols.length), symbols.length);
       }
       return out;
     }
@@ -1039,6 +1075,78 @@
       $('szOut').innerHTML = ''; $('rkOut').innerHTML = '';
       if (T.plan) addPlanAlerts(T.plan);
       renderDepot();
+    }
+
+    // ---------- Backtest ----------
+    S.bt = S.bt || {};
+    $('btSyms').value = S.bt.syms || (S.watch.length ? S.watch.slice(0, 20).join(' ') : 'AAPL MSFT NVDA AMZN META TSLA AMD GOOGL NFLX JPM');
+    if (S.bt.stop) $('btStop').value = S.bt.stop;
+    if (S.bt.stopVal) $('btStopVal').value = S.bt.stopVal;
+    if (S.bt.r) $('btR').value = S.bt.r;
+    if (S.bt.volX) $('btVolX').value = S.bt.volX;
+    if (S.bt.slip != null) $('btSlip').value = S.bt.slip;
+    if (S.bt.fee != null) $('btFee').value = S.bt.fee;
+    const syncBtStop = () => { $('btStopValWrap').hidden = $('btStop').value.startsWith('or-'); };
+    $('btStop').addEventListener('change', syncBtStop); syncBtStop();
+    const dnum = (id) => { const v = String($(id).value).trim().replace(',', '.'); return v === '' ? null : +v; };
+    $('btRun').addEventListener('click', async () => {
+      const syms = parseSyms($('btSyms').value).slice(0, 60);
+      if (!syms.length) return toast('Erst Werte eintragen.');
+      const o = { stopRule: $('btStop').value, stopValue: dnum('btStopVal'), targetR: dnum('btR') || 2, minVolumeX: dnum('btVolX'), slippage: dnum('btSlip') || 0, commission: dnum('btFee') || 0, applyDayLimits: $('btLimits').checked };
+      if (!o.stopRule.startsWith('or-') && !(o.stopValue > 0)) return toast('Für diesen Stopp einen Wert eintragen.');
+      S.bt = { syms: $('btSyms').value, stop: o.stopRule, stopVal: $('btStopVal').value, r: $('btR').value, volX: $('btVolX').value, slip: $('btSlip').value, fee: $('btFee').value }; save();
+      $('btRun').disabled = true; $('btOut').innerHTML = '';
+      const prog = (d, t) => { $('btProg').hidden = false; $('btProg').firstElementChild.style.width = `${Math.round(d / t * 100)}%`; $('btInfo').textContent = `Lade Kerzen: ${d} von ${t} Werten…`; };
+      const data = await charts(syms, '60d', '5m', prog);
+      $('btProg').hidden = true; $('btRun').disabled = false;
+      const bars = {}; const failed = [];
+      for (const s of syms) { const r = data[s]; if (r && r.bars && r.bars.length) bars[s] = r.bars; else failed.push(s); }
+      await new Promise((ok) => setTimeout(ok, 20));
+      const res = E.backtestORB(bars, { ...o, config: S.config, orMinutes: S.config.or_minutes });
+      renderBacktest(res, syms.length, failed);
+    });
+    function renderBacktest(res, asked, failed) {
+      const st = res.stats, inf = res.info, n = st.n;
+      $('btInfo').textContent = `${inf.symbols} von ${asked} Werten geladen${failed.length ? ` (ohne Daten: ${failed.join(', ')})` : ''}. ${inf.days} Handelstage von ${inf.from || '–'} bis ${inf.to || '–'}, zusammen ${inf.sessions} volle Tageskurven.`;
+      if (!n) { $('btOut').innerHTML = '<div class="card muted">Kein einziger Trade nach dieser Regel. Andere Werte oder weniger strenge Einstellungen probieren.</div>'; return; }
+      const pc = (x) => num(x * 100, 1) + ' %';
+      const money = (x) => `<span class="${x >= 0 ? 'up' : 'down'}">${x >= 0 ? '+' : ''}${usd(x)}</span>`;
+      const edge = st.winRate - st.breakEvenWinRate;
+      const verdict = Math.abs(edge) < 0.05 ? 'Nahe am Break even' : edge > 0 ? (edge < 0.15 ? 'Leicht im Vorteil' : 'Deutlich im Vorteil') : (edge > -0.15 ? 'Leicht im Nachteil' : 'Deutlich im Nachteil');
+      const r = res.reasons, sk = res.skipped;
+      $('btOut').innerHTML = `<div class="card"><h2>Ergebnis <span class="right">${n} Trades</span></h2>
+        <div class="stats">
+          <div class="stat"><div class="v">${money(st.totalPnl)}</div><div class="l">Summe nach Kosten</div></div>
+          <div class="stat"><div class="v">${pc(st.winRate)}</div><div class="l">Trefferquote (nötig ${pc(st.breakEvenWinRate)})</div></div>
+          <div class="stat"><div class="v">${st.avgR >= 0 ? '+' : ''}${num(st.avgR, 2)} R</div><div class="l">im Schnitt je Trade</div></div>
+          <div class="stat"><div class="v">${st.profitFactor == null ? '–' : num(st.profitFactor, 2)}</div><div class="l">Gewinnfaktor</div></div>
+          <div class="stat"><div class="v down">${usd(-st.maxDrawdown)}</div><div class="l">größter Rückgang</div></div>
+          <div class="stat"><div class="v">${usd(st.costs)}</div><div class="l">Kosten gesamt</div></div>
+        </div>
+        ${equityChart(res.curve)}
+        <div class="verdict">${verdict}: ${pc(st.winRate)} Treffer bei ${num(res.opts.targetR, 1)}R, zum Ausgleich nötig sind ${pc(st.breakEvenWinRate)}.</div>
+        <p class="small">Ausgänge: ${r.target} Ziel, ${r.stop} Stopp, ${r.gap} Lücke durch den Stopp (schlechter gefüllt), ${r.flat} zum Glattstellen. Gewinner im Schnitt ${money(st.avgWin)}, Verlierer ${money(st.avgLoss)}. Bester Trade ${money(st.best)}, schlechtester ${money(st.worst)}.</p>
+        <p class="small muted">${inf.noTrigger} Tage ohne Signal${sk.tradesPerDay || sk.dailyLoss ? `, ${sk.tradesPerDay} Signale wegen max Trades am Tag und ${sk.dailyLoss} wegen der Tagesverlust Grenze ausgelassen` : ''}${inf.tooSmall ? `, ${inf.tooSmall} zu teuer für eine einzige Aktie` : ''}.</p>
+        <p class="small muted">Nur 60 Tage und nur Werte, die es heute noch gibt. Die freien Kerzen sind 5 Minuten grob: was innerhalb einer Kerze zuerst kam, ist unbekannt, deshalb zählt Stopp und Ziel in derselben Kerze als Stopp. Ein gutes Ergebnis hier ist kein Versprechen.</p></div>
+        <div class="card"><h2>Nach Wert</h2><div class="scroll"><table><tr><th>Wert</th><th class="r">Trades</th><th class="r">Treffer</th><th class="r">Ø R</th><th class="r">Summe</th></tr>
+        ${res.bySymbol.map((s) => `<tr><td><b>${esc(s.symbol)}</b></td><td class="r">${s.n}</td><td class="r">${pc(s.wins / s.n)}</td><td class="r">${num(s.sumR / s.n, 2)}</td><td class="r">${money(s.pnl)}</td></tr>`).join('')}</table></div></div>
+        <div class="card"><details><summary>Alle ${n} Trades anzeigen (neueste zuerst)</summary><div class="scroll"><table><tr><th>Tag</th><th>Wert</th><th class="r">Zeit</th><th class="r">Stück</th><th class="r">Kauf</th><th class="r">Verkauf</th><th>Ausgang</th><th class="r">±</th></tr>
+        ${res.trades.slice().reverse().slice(0, 300).map((t) => `<tr><td>${esc(t.date.slice(5))}</td><td><b>${esc(t.symbol)}</b></td><td class="r">${E.fmtMin(t.entryMin)}</td><td class="r">${t.qty}</td><td class="r">${num(t.entry)}</td><td class="r">${num(t.exit)}</td><td class="small">${{ target: 'Ziel', stop: 'Stopp', gap: 'Lücke', flat: 'Glatt' }[t.reason]}</td><td class="r">${money(t.pnl)}</td></tr>`).join('')}</table></div></details></div>`;
+    }
+    function equityChart(curve) {
+      const W = 640, H = 180, P = { l: 8, r: 64, t: 10, b: 10 };
+      const vals = curve.map((c) => c.equity);
+      let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals); const pad = (hi - lo) * 0.08 || 10; lo -= pad; hi += pad;
+      const x = (i) => P.l + (i / Math.max(1, curve.length - 1)) * (W - P.l - P.r);
+      const y = (v) => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
+      const last = vals[vals.length - 1];
+      const col = last >= 0 ? '#3F8F4F' : '#B5533C';
+      return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kapitalkurve">
+        <line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" stroke="#8A8069" stroke-dasharray="4 4"/>
+        <text x="${W - P.r + 4}" y="${y(0) + 4}" font-size="11" fill="#8A8069" font-family="Inter">0 $</text>
+        <polyline points="${curve.map((c) => `${x(c.i)},${y(c.equity)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="2"/>
+        <text x="${W - P.r + 4}" y="${y(last) + 4}" font-size="11" fill="${col}" font-family="Inter" font-weight="700">${num(last, 0)} $</text>
+      </svg><div class="small muted">Kapitalkurve: Summe nach jedem Trade, in zeitlicher Reihenfolge.</div>`;
     }
 
     // ---------- News ----------
