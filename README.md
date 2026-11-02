@@ -1,4 +1,4 @@
-# Trading
+# Wick Trading
 
 Eine Seite für Day Trading mit Papiergeld, gebaut aus den trader Skills:
 Scanner, Einstieg über die Eröffnungsspanne, Stopp und Ziel, Zeitmaschine

@@ -1,6 +1,6 @@
 {
-  "name": "Trading",
-  "short_name": "Trading",
+  "name": "Wick Trading",
+  "short_name": "Wick Trading",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FBF8F1",
