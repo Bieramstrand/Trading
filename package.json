@@ -1,0 +1,9 @@
+{
+  "name": "trading",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Trading Seite mit Papierdepot, gebaut aus den trader Skills",
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}

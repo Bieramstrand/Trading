@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Trading">
+  <meta name="theme-color" content="#FBF8F1">
+  <title>Trading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #FBF8F1;
+      --card: #FFFFFF;
+      --ink: #2A2417;
+      --muted: #8A8069;
+      --rule: #E4DCC5;
+      --soft: #F1ECDD;
+      --accent: #1B64B0;
+      --up: #3F8F4F;
+      --down: #B5533C;
+      --warn: #B88A1E;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font: 400 15px/1.45 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+    a { color: var(--accent); }
+    .top { position: sticky; top: 0; z-index: 10; background: var(--paper); }
+    .bar {
+      display: flex; align-items: center; gap: 14px;
+      padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
+    }
+    .sign {
+      width: 44px; height: 44px; border-radius: 6px; flex-shrink: 0;
+      background: var(--up); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+    }
+    h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 1.35rem; line-height: 1.15; margin: 0; }
+    #clock { margin: 3px 0 0; font-size: 0.8rem; color: var(--muted); }
+    #clock .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 5px; vertical-align: 0; }
+    #clock.open .dot { background: var(--up); }
+    .back {
+      margin-left: auto; flex-shrink: 0; font-size: 0.85rem; font-weight: 600; color: var(--accent);
+      text-decoration: none; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 8px; background: #fff;
+    }
+    .tabs {
+      display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto;
+      background: var(--paper); border-bottom: 1px solid var(--rule);
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex-shrink: 0; min-height: 38px; padding: 0 14px; border-radius: 19px;
+      border: 1.5px solid var(--rule); background: #fff; color: var(--ink);
+      font: 700 0.86rem 'Inter', sans-serif; cursor: pointer;
+    }
+    .tab.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .tab .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--down); color: #fff; font-size: 0.72rem; line-height: 18px; }
+    main { max-width: 780px; margin: 0 auto; padding: 14px 16px 40px; }
+    section[hidden] { display: none; }
+    .card { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+    .card h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 1.1rem; margin: 0 0 8px; display: flex; align-items: baseline; gap: 8px; }
+    .card h2 .step { font: 800 0.75rem 'Inter', sans-serif; color: #fff; background: var(--accent); border-radius: 10px; padding: 2px 8px; }
+    .card h2 .right { margin-left: auto; font: 600 0.78rem 'Inter', sans-serif; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .small { font-size: 0.8rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 8px 0; }
+    label { display: flex; flex-direction: column; gap: 3px; font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+    input, select, textarea {
+      font: 400 0.95rem 'Inter', sans-serif; color: var(--ink);
+      border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; background: #fff; min-height: 40px;
+    }
+    input[type=checkbox] { min-height: 0; width: 18px; height: 18px; }
+    textarea { width: 100%; min-height: 70px; resize: vertical; }
+    input.sym { width: 110px; text-transform: uppercase; font-weight: 700; }
+    input.n { width: 100px; }
+    .check { flex-direction: row; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--ink); font-weight: 400; min-height: 40px; }
+    button.btn {
+      min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--ink);
+      background: var(--ink); color: #fff; font: 700 0.88rem 'Inter', sans-serif; cursor: pointer;
+    }
+    button.btn.ghost { background: #fff; color: var(--ink); border-color: var(--rule); }
+    button.btn.go { background: var(--up); border-color: var(--up); }
+    button.btn.stop { background: var(--down); border-color: var(--down); }
+    button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    button:focus-visible, .tab:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .status { padding: 10px 12px; border-radius: 8px; background: var(--soft); margin: 8px 0; font-weight: 600; }
+    .status.ok { background: #E6F1E3; color: #24562F; }
+    .status.bad { background: #F6E3DC; color: #7C2F1D; }
+    .status.wait { background: #F7EFD9; color: #6E5410; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+    th, td { text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+    th { font-size: 0.72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+    td.r, th.r { text-align: right; }
+    .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .up { color: var(--up); } .down { color: var(--down); }
+    .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+    .kv dt { color: var(--muted); }
+    .kv dd { margin: 0; font-weight: 600; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+    .stat { background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+    .stat .v { font: 700 1.15rem 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+    .stat .l { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
+    .chip { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 9px; background: var(--soft); color: var(--ink); margin: 0 3px 3px 0; }
+    .chip.new { background: var(--accent); color: #fff; }
+    .chip.imp { background: var(--down); color: #fff; }
+    .chip.mov { background: var(--warn); color: #fff; }
+    .list { list-style: none; margin: 0; padding: 0; }
+    .list li { padding: 9px 0; border-bottom: 1px solid var(--rule); }
+    .list li:last-child { border-bottom: 0; }
+    .list .t { font-weight: 600; }
+    .hit { display: flex; gap: 10px; align-items: center; }
+    .hit .s { font-weight: 800; min-width: 58px; }
+    .hit .grow { flex: 1; min-width: 0; }
+    .hit button { min-height: 34px; padding: 0 10px; font-size: 0.8rem; }
+    svg.chart { width: 100%; height: auto; display: block; margin: 6px 0; }
+    details summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; color: var(--accent); margin-top: 6px; }
+    pre { background: var(--soft); border-radius: 8px; padding: 10px; overflow-x: auto; font-size: 0.75rem; }
+    .verdict { font-weight: 700; font-size: 1rem; margin: 8px 0 4px; }
+    .note { font-size: 0.75rem; color: var(--muted); text-align: center; margin: 18px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+    #toast {
+      position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+      max-width: calc(100% - 32px); background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 10px;
+      font-size: 0.88rem; box-shadow: 0 6px 20px rgba(0,0,0,0.2); z-index: 50; display: none;
+    }
+    .banner { background: #F6E3DC; color: #7C2F1D; border: 1px solid #E8C3B5; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-weight: 600; }
+    .progress { height: 4px; background: var(--soft); border-radius: 2px; overflow: hidden; margin: 6px 0; }
+    .progress > div { height: 100%; background: var(--accent); width: 0; transition: width 0.2s; }
+    @media (max-width: 480px) {
+      .card { padding: 12px; }
+      .hide-s { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top">
+  <div class="bar">
+    <div class="sign" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19l6-6 4 4 9-10"/><path d="M16 7h6v6"/></svg>
+    </div>
+    <div>
+      <h1>Trading</h1>
+      <p id="clock"><span class="dot"></span>NYSE wird geprüft…</p>
+    </div>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab active" data-tab="home">Übersicht</button>
+    <button class="tab" data-tab="scan">Scanner</button>
+    <button class="tab" data-tab="trade">Trade</button>
+    <button class="tab" data-tab="news">News</button>
+    <button class="tab" data-tab="facts">Zahlen</button>
+    <button class="tab" data-tab="congress">Kongress</button>
+    <button class="tab" data-tab="rules">Regeln</button>
+  </nav>
+  </div>
+
+  <main>
+    <!-- Uebersicht -->
+    <section id="tab-home">
+      <div id="flatBanner"></div>
+      <div class="card">
+        <h2>Papierdepot <span class="right" id="depotTime"></span></h2>
+        <div class="stats" id="depotStats"></div>
+        <div id="positions" style="margin-top:12px"></div>
+        <div class="row"><button class="btn ghost" id="refreshDepot">Kurse aktualisieren</button></div>
+      </div>
+      <div class="card">
+        <h2>Heute</h2>
+        <div class="stats" id="todayStats"></div>
+      </div>
+      <div class="card">
+        <h2>Alarme <span class="right" id="alertState"></span></h2>
+        <ul class="list" id="alertList"></ul>
+        <div class="row">
+          <label>Art
+            <select id="alType">
+              <option value="above">Kurs über</option>
+              <option value="below">Kurs unter</option>
+              <option value="pct_move">Bewegung in %</option>
+              <option value="time">Uhrzeit New York</option>
+              <option value="opening_bell">Eröffnungsglocke</option>
+            </select>
+          </label>
+          <label>Ticker <input class="sym" id="alSym" placeholder="TSLA" autocapitalize="characters"></label>
+          <label id="alValWrap">Wert <input class="n" id="alVal" inputmode="decimal" placeholder="370"></label>
+          <button class="btn" id="alAdd">Hinzufügen</button>
+        </div>
+        <div class="row"><button class="btn ghost" id="notifyBtn">Mitteilungen erlauben</button></div>
+        <p class="small muted">Alarme laufen, solange diese Seite offen ist, und prüfen jede Minute. Jeder Alarm klingelt einmal. Ein Alarm ist eine Info, nie eine Order.</p>
+      </div>
+      <div class="card">
+        <h2>Abgeschlossene Trades</h2>
+        <div id="closedList" class="scroll"></div>
+      </div>
+    </section>
+
+    <!-- Scanner -->
+    <section id="tab-scan" hidden>
+      <div class="card">
+        <h2>Chart Scanner</h2>
+        <p class="small muted" style="margin-top:0">Sucht in deiner Liste Charts, die eine Regel erfüllen. Ein Treffer ist keine Kaufempfehlung und keine Vorhersage.</p>
+        <label>Werte (Ticker, durch Komma oder Leerzeichen getrennt)
+          <textarea id="universe" autocapitalize="characters" spellcheck="false"></textarea>
+        </label>
+        <div class="row">
+          <label>Mindestkurs $ <input class="n" id="minPrice" inputmode="decimal"></label>
+          <label>Mindestvolumen <input class="n" id="minVol" inputmode="numeric"></label>
+        </div>
+        <div class="row">
+          <button class="btn" id="scanDaily">Tagesscan</button>
+          <button class="btn ghost" id="scanOrb">Eröffnungsspanne</button>
+          <label class="check"><input type="checkbox" id="scanReplay"> letzter Handelstag</label>
+        </div>
+        <div class="progress" id="scanProg" hidden><div></div></div>
+        <div id="scanInfo" class="small muted"></div>
+      </div>
+      <div id="scanResults"></div>
+    </section>
+
+    <!-- Trade -->
+    <section id="tab-trade" hidden>
+      <div class="card">
+        <h2><span class="step">1</span> Einstieg</h2>
+        <div class="row">
+          <label>Ticker <input class="sym" id="tSym" placeholder="TSLA" autocapitalize="characters"></label>
+          <label>Kerzen
+            <select id="tIv"><option value="5">5 Minuten</option><option value="1">1 Minute</option></select>
+          </label>
+          <label>Setup
+            <select id="tSetup"><option value="orb">Eröffnungsspanne</option><option value="level">Eigene Marke</option></select>
+          </label>
+          <label id="tLevelWrap" hidden>Marke $ <input class="n" id="tLevel" inputmode="decimal"></label>
+          <label>Volumen × <input class="n" id="tVolX" inputmode="decimal" placeholder="aus"></label>
+        </div>
+        <div class="row">
+          <button class="btn" id="tCheck">Prüfen</button>
+          <button class="btn ghost" id="tWatch">Beobachten</button>
+          <label class="check"><input type="checkbox" id="tReplay"> letzter Handelstag</label>
+        </div>
+        <div id="entryOut"></div>
+        <details>
+          <summary>Vorab planen mit eigenem Einstiegskurs</summary>
+          <div class="row">
+            <label>Einstieg $ <input class="n" id="tManual" inputmode="decimal"></label>
+            <button class="btn ghost" id="tManualGo">Als Einstieg nehmen</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">2</span> Ausstieg planen</h2>
+        <div class="row">
+          <label>Stopp
+            <select id="xStop">
+              <option value="or-mid">Mitte der Spanne</option>
+              <option value="or-low">Tief der Spanne</option>
+              <option value="price">eigener Kurs</option>
+              <option value="pct">Prozent unter Einstieg</option>
+              <option value="atr">ATR Vielfaches</option>
+            </select>
+          </label>
+          <label id="xStopValWrap" hidden>Wert <input class="n" id="xStopVal" inputmode="decimal"></label>
+          <label>Ziel
+            <select id="xTgt"><option value="R">Vielfaches R</option><option value="price">eigener Kurs</option></select>
+          </label>
+          <label>Wert <input class="n" id="xTgtVal" inputmode="decimal" value="2"></label>
+          <button class="btn" id="xPlan">Planen</button>
+        </div>
+        <div id="planOut"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">3</span> Zeitmaschine</h2>
+        <p class="small muted" style="margin-top:0">Spielt den Rest des Tages 10.000 mal durch, gebaut aus den 5 Minuten Kerzen der letzten 60 Tage, und prüft dieselbe Regel an jedem vergangenen Tag. Simulation, keine Vorhersage.</p>
+        <div class="row">
+          <label>Wiederholungen <input class="n" id="tmN" inputmode="numeric" value="10000"></label>
+          <label>Seed <input class="n" id="tmSeed" inputmode="numeric" value="19"></label>
+          <button class="btn" id="tmRun">Durchspielen</button>
+        </div>
+        <div id="tmOut"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">4</span> Positionsgröße</h2>
+        <div class="row"><button class="btn" id="szRun">Größe berechnen</button></div>
+        <div id="szOut"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">5</span> Risiko Prüfung</h2>
+        <div class="row"><button class="btn" id="rkRun">Prüfen</button></div>
+        <div id="rkOut"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">6</span> Papierorder</h2>
+        <div id="orderOut"><p class="muted small">Erst wenn die Risiko Prüfung PASS sagt, erscheint hier das Ticket.</p></div>
+      </div>
+    </section>
+
+    <!-- News -->
+    <section id="tab-news" hidden>
+      <div class="card">
+        <h2>News</h2>
+        <p class="small muted" style="margin-top:0">Schlagzeilen von Yahoo Finance und Meldungen an die SEC (8-K). Schlagzeilen sind Hinweise, keine Fakten: vor einer Entscheidung die Quelle lesen.</p>
+        <div class="row">
+          <label style="flex:1; min-width:200px">Ticker <input id="newsSyms" autocapitalize="characters" spellcheck="false" placeholder="TSLA NVDA"></label>
+          <button class="btn" id="newsRun">Prüfen</button>
+          <label class="check"><input type="checkbox" id="newsAll"> auch schon gesehene</label>
+        </div>
+        <div id="newsInfo" class="small muted"></div>
+      </div>
+      <div id="newsOut"></div>
+    </section>
+
+    <!-- Zahlen -->
+    <section id="tab-facts" hidden>
+      <div class="card">
+        <h2>Quartalszahlen</h2>
+        <p class="small muted" style="margin-top:0">Direkt aus den Zahlen, die das Unternehmen bei der SEC eingereicht hat. Wachstum immer gegen dasselbe Quartal im Vorjahr.</p>
+        <div class="row">
+          <label>Ticker <input class="sym" id="fSym" placeholder="AAPL" autocapitalize="characters"></label>
+          <label>Quartale <select id="fQ"><option>4</option><option selected>8</option><option>12</option></select></label>
+          <button class="btn" id="fRun">Laden</button>
+        </div>
+      </div>
+      <div id="factsOut"></div>
+    </section>
+
+    <!-- Kongress -->
+    <section id="tab-congress" hidden>
+      <div class="card">
+        <h2>Kongress Trades</h2>
+        <p class="small muted" style="margin-top:0">Meldungen von Abgeordneten nach dem STOCK Act (House Clerk). Schnell gelesen, aber nicht früh: gemeldet wird bis zu 45 Tage nach dem Trade. Kein Insiderwissen, nur öffentliche Meldungen.</p>
+        <div class="row">
+          <label style="flex:1; min-width:180px">Abgeordnete (mit | trennen, leer = alle) <input id="cMembers" placeholder="pelosi"></label>
+          <label>Seit <input type="date" id="cSince"></label>
+          <button class="btn" id="cRun">Laden</button>
+        </div>
+      </div>
+      <div id="congressOut"></div>
+    </section>
+
+    <!-- Regeln -->
+    <section id="tab-rules" hidden>
+      <div class="card">
+        <h2>Deine Regeln</h2>
+        <p class="small muted" style="margin-top:0">Einmal festlegen. Nur Geld, dessen Verlust du verkraften kannst. Zeiten in New Yorker Zeit.</p>
+        <div id="cfgForm"></div>
+        <div class="row">
+          <button class="btn" id="cfgSave">Speichern</button>
+          <button class="btn ghost" id="cfgReset">Standard</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Papierdepot</h2>
+        <p class="small muted" style="margin-top:0">Startet mit deinem Budget als Bargeld. Zurücksetzen löscht Positionen und Verlauf.</p>
+        <div class="row">
+          <button class="btn stop" id="depotReset">Depot zurücksetzen</button>
+          <button class="btn ghost" id="exportBtn">Daten exportieren</button>
+        </div>
+      </div>
+      <div class="card small muted">
+        <h2>Gut zu wissen</h2>
+        <p>Die Kurse kommen frei und inoffiziell von Yahoo Finance, Kerze für Kerze, nie in Echtzeit. Die Börsenzeiten kennen die NYSE Feiertage 2026 und 2027.</p>
+        <p>Für SEC Meldungen und Quartalszahlen braucht Netlify die Umgebungsvariable <b>SEC_USER_AGENT</b> mit Name und E-Mail, so verlangt es die SEC.</p>
+        <p>Diese Seite handelt nur mit Papiergeld. Bildung und Werkzeug, keine Anlageberatung. Die meisten Daytrader verlieren Geld.</p>
+      </div>
+    </section>
+
+    <p class="note">Papiergeld · Kurse von Yahoo, frei und verzögert · keine Anlageberatung</p>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="trading-engine.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    const E = window.TraderEngine;
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const usd = (x) => (x == null || isNaN(x) ? '–' : E.usd(x));
+    const num = (x, d = 2) => (x == null || isNaN(x) ? '–' : E.num(x, d));
+    const signPct = (x, d = 2) => (x == null || isNaN(x) ? '–' : (x > 0 ? '+' : '') + E.num(x, d) + ' %');
+    const big = (x) => {
+      if (x == null) return '–';
+      const a = Math.abs(x);
+      if (a >= 1e9) return E.num(x / 1e9, 2) + ' Mrd $';
+      if (a >= 1e6) return E.num(x / 1e6, 1) + ' Mio $';
+      return E.usd(x);
+    };
+    const DEFAULT_UNIVERSE = 'AAPL MSFT NVDA AMZN GOOGL META TSLA AVGO AMD NFLX ORCL CRM ADBE INTC QCOM MU TXN AMAT LRCX ARM SMCI PLTR SNOW SHOP UBER ABNB COIN HOOD SOFI PYPL SQ ROKU RIVN LCID F GM NIO BABA PDD JD JPM BAC WFC C GS MS SCHW BLK AXP V MA KO PEP MCD SBUX NKE WMT COST TGT HD LOW DIS CMCSA T VZ XOM CVX OXY COP SLB BA LMT RTX GE CAT DE MMM HON UNH JNJ PFE MRK LLY ABBV BMY CVS CI GILD AMGN MRNA CCL RCL DAL UAL AAL PLUG ENPH FSLR MARA RIOT DKNG SPOT PINS SNAP';
+
+    // ---------- Zustand ----------
+    const KEY = 'trader.v1';
+    const fresh = () => ({
+      config: { ...E.DEFAULT_CONFIG }, universe: DEFAULT_UNIVERSE, watch: [],
+      trade: { symbol: '', interval: 5, setup: 'orb' }, depot: null, alerts: [], newsSeen: {}, congressSeen: {}, members: 'pelosi',
+    });
+    let S;
+    try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { S = fresh(); }
+    S.config = { ...E.DEFAULT_CONFIG, ...S.config };
+    if (!S.depot) S.depot = { cash: S.config.budget, positions: [], closed: [], log: [] };
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* voll oder privat */ } };
+    const mem = { entry: null, bars: null, tm: null, sizing: null, risk: null, quotes: {}, watchTimer: null };
+
+    function toast(msg, ms = 4000) {
+      const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+      clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; }, ms);
+    }
+    function notify(title, body) {
+      toast(`${title}: ${body}`, 8000);
+      try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) { /* egal */ }
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body, tag: title + body });
+      } catch (e) { /* iOS ohne Homescreen */ }
+    }
+
+    // ---------- Daten ----------
+    async function api(fn, params) {
+      const qs = new URLSearchParams(params).toString();
+      const res = await fetch(`/.netlify/functions/${fn}?${qs}`);
+      if (!res.ok) {
+        let msg = `${fn} antwortet mit ${res.status}`;
+        try { const j = await res.json(); if (j.error) msg = j.error; } catch (e) { /* kein JSON */ }
+        throw new Error(msg);
+      }
+      return res.json();
+    }
+    async function charts(symbols, range, interval, onProgress) {
+      const out = {};
+      for (let i = 0; i < symbols.length; i += 25) {
+        const part = symbols.slice(i, i + 25);
+        try {
+          const j = await api('market-chart', { symbols: part.join(','), range, interval });
+          Object.assign(out, j.data);
+        } catch (e) { part.forEach((s) => { out[s] = { error: e.message }; }); }
+        if (onProgress) onProgress(Math.min(i + 25, symbols.length), symbols.length);
+      }
+      return out;
+    }
+    async function quotes(symbols) {
+      if (!symbols.length) return {};
+      const d = await charts(symbols, '1d', '5m');
+      const out = {};
+      for (const s of symbols) {
+        const r = d[s];
+        if (r && r.meta && r.meta.price != null) {
+          out[s] = { price: r.meta.price, prevClose: r.meta.regularPrevClose ?? r.meta.prevClose, time: (r.meta.time || 0) * 1000, bars: r.bars, name: r.meta.name };
+          mem.quotes[s] = { ...out[s], fetched: Date.now() };
+        }
+      }
+      return out;
+    }
+    const parseSyms = (s) => [...new Set(String(s || '').toUpperCase().split(/[\s,;]+/).map((x) => x.trim()).filter((x) => /^[A-Z0-9.\-^]{1,10}$/.test(x)))];
+
+    // ---------- Uhr ----------
+    const berlinFmt = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' });
+    function nyToLocal(dateStr, min) {
+      // Minute in New York zu Berliner Uhrzeit: Offset ueber eine Stichprobe bestimmen
+      const [y, m, d] = dateStr.split('-').map(Number);
+      let guess = Date.UTC(y, m - 1, d, Math.floor(min / 60), min % 60);
+      for (let i = 0; i < 2; i++) { const n = E.ny(guess); const diff = (n.min - min) + (n.date !== dateStr ? (n.date > dateStr ? 1440 : -1440) : 0); guess -= diff * 60000; }
+      return berlinFmt.format(new Date(guess));
+    }
+    function renderClock() {
+      const c = E.marketClock(Date.now());
+      const el = $('clock');
+      el.className = c.open ? 'open' : '';
+      const t = E.fmtHM(c.ny.min);
+      let txt;
+      if (c.open) txt = `NYSE offen · ${t} New York · Schluss ${E.fmtHM(c.closeMin)}${c.earlyClose ? ' (früher Schluss)' : ''}`;
+      else {
+        const wd = new Date(c.nextOpenDate + 'T12:00:00Z').toLocaleDateString('de-DE', { weekday: 'short', timeZone: 'UTC' });
+        txt = `NYSE zu (${c.reason}) · öffnet ${c.nextOpenDate === c.date ? 'heute' : wd} ${nyToLocal(c.nextOpenDate, 570)} Uhr bei uns`;
+      }
+      if (!c.knownYear) txt += ' · Feiertage für dieses Jahr unbekannt';
+      el.innerHTML = `<span class="dot"></span>${esc(txt)}`;
+      return c;
+    }
+
+    // ---------- Tabs ----------
+    function showTab(name) {
+      document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
+      document.querySelectorAll('main > section').forEach((s) => { s.hidden = s.id !== `tab-${name}`; });
+      try { sessionStorage.setItem('trader.tab', name); } catch (e) { /* egal */ }
+      window.scrollTo(0, 0);
+    }
+    document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+    // ---------- Depot ----------
+    const todayNY = () => E.ny(Date.now()).date;
+    function todayStats() {
+      const d = todayNY();
+      const log = S.depot.log.filter((l) => l.date === d);
+      const closedToday = S.depot.closed.filter((c) => c.closedDate === d);
+      const realized = closedToday.reduce((a, c) => a + c.pnl, 0);
+      const realizedLoss = closedToday.reduce((a, c) => a + Math.max(0, -c.pnl), 0);
+      const openRisk = S.depot.positions.reduce((a, p) => a + Math.max(0, p.qty * (p.entry - p.stop)), 0);
+      return {
+        entries: log.filter((l) => l.side === 'buy').length, orders: log.length, realized, realizedLoss, openRisk,
+        symbols: S.depot.positions.map((p) => p.symbol),
+      };
+    }
+    function renderDepot() {
+      const cfg = S.config;
+      let value = 0, unreal = 0;
+      for (const p of S.depot.positions) {
+        const q = mem.quotes[p.symbol];
+        const px = q ? q.price : p.entry;
+        value += p.qty * px; unreal += p.qty * (px - p.entry);
+      }
+      const total = S.depot.cash + value;
+      const ch = total - cfg.budget;
+      $('depotStats').innerHTML = [
+        ['Gesamt', usd(total)], ['Bargeld', usd(S.depot.cash)], ['Positionen', usd(value)],
+        ['seit Start', `<span class="${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '+' : ''}${usd(ch)}</span>`],
+      ].map(([l, v]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+      if (!S.depot.positions.length) $('positions').innerHTML = '<p class="muted small">Keine offenen Positionen.</p>';
+      else {
+        $('positions').innerHTML = `<div class="scroll"><table><tr><th>Wert</th><th class="r">Stück</th><th class="r">Kauf</th><th class="r">Jetzt</th><th class="r">Stopp</th><th class="r">Ziel</th><th class="r">±</th><th></th></tr>${
+          S.depot.positions.map((p) => {
+            const q = mem.quotes[p.symbol]; const px = q ? q.price : null;
+            const pl = px != null ? p.qty * (px - p.entry) : null;
+            return `<tr><td><b>${esc(p.symbol)}</b>${p.date !== todayNY() ? '<br><span class="chip imp">über Nacht</span>' : ''}</td><td class="r">${p.qty}</td><td class="r">${num(p.entry)}</td><td class="r">${num(px)}</td><td class="r">${num(p.stop)}</td><td class="r">${num(p.target)}</td><td class="r ${pl >= 0 ? 'up' : 'down'}">${pl == null ? '–' : (pl >= 0 ? '+' : '') + num(pl)}</td><td><button class="btn ghost" style="min-height:32px;padding:0 10px" data-sell="${p.id}">Verkaufen</button></td></tr>`;
+          }).join('')}</table></div><p class="small muted">Stopp und Ziel liegen als Bracket im Papierdepot und werden bei jeder Aktualisierung gegen die 5 Minuten Kerzen geprüft. Eine Lücke kann unter dem Stopp füllen.</p>`;
+      }
+      const t = todayStats();
+      $('todayStats').innerHTML = [
+        ['Trades', `${t.entries} / ${cfg.max_trades_per_day}`],
+        ['Risiko benutzt', `${usd(t.realizedLoss + t.openRisk)} / ${usd(cfg.max_daily_loss_usd)}`],
+        ['Ergebnis heute', `<span class="${t.realized >= 0 ? 'up' : 'down'}">${t.realized >= 0 ? '+' : ''}${usd(t.realized)}</span>`],
+        ['Orders', `${t.orders} / ${cfg.max_orders_per_day}`],
+      ].map(([l, v]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+      const cl = S.depot.closed.slice(-30).reverse();
+      $('closedList').innerHTML = cl.length ? `<table><tr><th>Tag</th><th>Wert</th><th class="r">Stück</th><th class="r">Kauf</th><th class="r">Verkauf</th><th class="r">±</th><th class="hide-s">Grund</th></tr>${
+        cl.map((c) => `<tr><td>${esc(c.closedDate.slice(5))}</td><td><b>${esc(c.symbol)}</b></td><td class="r">${c.qty}</td><td class="r">${num(c.entry)}</td><td class="r">${num(c.exit)}</td><td class="r ${c.pnl >= 0 ? 'up' : 'down'}">${c.pnl >= 0 ? '+' : ''}${num(c.pnl)}</td><td class="hide-s small">${esc(c.reason)}</td></tr>`).join('')}</table>` : '<p class="muted small">Noch keine.</p>';
+      renderFlatBanner();
+    }
+    function closePosition(id, price, reason, tMs) {
+      const i = S.depot.positions.findIndex((p) => p.id === id);
+      if (i < 0) return;
+      const p = S.depot.positions[i];
+      const exit = E.round2(price);
+      S.depot.cash = E.round2(S.depot.cash + p.qty * exit);
+      const when = tMs || Date.now();
+      S.depot.closed.push({ ...p, exit, closedAt: when, closedDate: E.ny(when).date, pnl: E.round2(p.qty * (exit - p.entry)), reason });
+      S.depot.positions.splice(i, 1);
+      S.depot.log.push({ date: todayNY(), at: Date.now(), side: 'sell', symbol: p.symbol, qty: p.qty, price: exit, reason });
+      save();
+    }
+    async function refreshDepot(silent) {
+      const syms = [...new Set(S.depot.positions.map((p) => p.symbol))];
+      if (!syms.length) { renderDepot(); return; }
+      try {
+        const q = await quotes(syms);
+        // Bracket gegen die Kerzen seit dem Kauf pruefen
+        for (const p of [...S.depot.positions]) {
+          const r = q[p.symbol]; if (!r) continue;
+          const bars = E.normalizeBars(r.bars, 5).filter((b) => b.min >= E.OPEN_MIN);
+          const done = bars.filter((b) => (b.t + 300) * 1000 <= Date.now());
+          const hit = E.bracketOutcome({ stop: p.stop, target: p.target, openedAt: p.openedAt - 300000 }, done.filter((b) => (b.t + 300) * 1000 > p.openedAt));
+          if (hit) {
+            closePosition(p.id, hit.price, hit.hit === 'stop' ? 'Stopp ausgelöst' : 'Ziel erreicht', hit.t * 1000);
+            notify(`${p.symbol} ${hit.hit === 'stop' ? 'Stopp' : 'Ziel'}`, `verkauft bei ${usd(hit.price)} (Papierdepot)`);
+          }
+        }
+        $('depotTime').textContent = `Stand ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+      } catch (e) { if (!silent) toast('Kurse nicht geladen: ' + e.message); }
+      renderDepot();
+    }
+    $('refreshDepot').addEventListener('click', () => refreshDepot(false));
+    $('positions').addEventListener('click', async (ev) => {
+      const id = ev.target.getAttribute('data-sell'); if (!id) return;
+      const p = S.depot.positions.find((x) => x.id === id); if (!p) return;
+      const q = await quotes([p.symbol]).catch(() => ({}));
+      const px = q[p.symbol] ? q[p.symbol].price : null;
+      if (px == null) { toast('Kein aktueller Kurs, Verkauf nicht möglich.'); return; }
+      if (!confirm(`${p.qty} ${p.symbol} zu etwa ${usd(px)} verkaufen? (Papierdepot)`)) return;
+      closePosition(p.id, px, 'von Hand verkauft');
+      renderDepot(); toast(`${p.symbol} verkauft.`);
+    });
+    function renderFlatBanner() {
+      const c = E.marketClock(Date.now());
+      let flat = E.hm(S.config.flat_by); if (c.earlyClose) flat = Math.min(flat, c.closeMin - 5);
+      const late = S.depot.positions.filter((p) => p.date !== c.date || (c.open && c.ny.min >= flat));
+      $('flatBanner').innerHTML = late.length
+        ? `<div class="banner">Glattstellen: ${late.map((p) => esc(p.symbol)).join(', ')} ${c.open ? `sollte bis ${E.fmtHM(flat)} New York raus sein` : 'ist noch offen, kein Halten über Nacht geplant'}. <button class="btn stop" style="min-height:32px;margin-left:6px" id="flatAll">Alles verkaufen</button></div>` : '';
+      const b = $('flatAll');
+      if (b) b.onclick = async () => {
+        const syms = [...new Set(late.map((p) => p.symbol))];
+        const q = await quotes(syms).catch(() => ({}));
+        let n = 0;
+        for (const p of late) { const r = q[p.symbol]; if (r) { closePosition(p.id, r.price, 'glattgestellt'); n++; } }
+        renderDepot(); toast(n ? `${n} Position(en) glattgestellt.` : 'Keine Kurse, nichts verkauft.');
+      };
+    }
+
+    // ---------- Alarme ----------
+    const alertLabel = (a) => {
+      switch (a.type) {
+        case 'above': return `${a.symbol} über ${usd(a.price)}`;
+        case 'below': return `${a.symbol} unter ${usd(a.price)}`;
+        case 'stop': return `${a.symbol} Stopp ${usd(a.price)}`;
+        case 'target': return `${a.symbol} Ziel ${usd(a.price)}`;
+        case 'pct_move': return `${a.symbol} bewegt sich ${num(a.pct, 1)} %`;
+        case 'time': return `${a.at} New York: ${a.label || 'Zeit'}`;
+        case 'opening_bell': return 'Eröffnungsglocke';
+        default: return a.type;
+      }
+    };
+    function renderAlerts() {
+      $('alertList').innerHTML = S.alerts.length ? S.alerts.map((a) => `<li class="hit"><div class="grow"><span class="t">${esc(alertLabel(a))}</span>${a.date ? ` <span class="chip">${esc(a.date)}</span>` : ''}${a.rang ? ` <span class="chip new">geklingelt ${esc(a.rang)}</span>` : ''}</div>${a.rang ? `<button class="btn ghost" data-rearm="${a.id}">Neu</button>` : ''}<button class="btn ghost" data-del="${a.id}">Löschen</button></li>`).join('') : '<li class="muted small">Keine Alarme.</li>';
+      $('alertState').textContent = 'Notification' in window ? (Notification.permission === 'granted' ? 'Mitteilungen an' : '') : '';
+    }
+    $('alType').addEventListener('change', () => {
+      const t = $('alType').value;
+      $('alValWrap').hidden = t === 'opening_bell';
+      $('alSym').parentElement.hidden = t === 'time' || t === 'opening_bell';
+      $('alVal').placeholder = t === 'time' ? '15:55' : t === 'pct_move' ? '3' : '370';
+      $('alVal').inputMode = t === 'time' ? 'text' : 'decimal';
+    });
+    $('alAdd').addEventListener('click', () => {
+      const t = $('alType').value, sym = parseSyms($('alSym').value)[0], v = $('alVal').value.trim().replace(',', '.');
+      const a = { id: 'a' + Date.now().toString(36), type: t };
+      if (t === 'above' || t === 'below') { if (!sym || !(+v > 0)) return toast('Ticker und Kurs angeben.'); a.symbol = sym; a.price = +v; }
+      else if (t === 'pct_move') { if (!sym || !(+v > 0)) return toast('Ticker und Prozent angeben.'); a.symbol = sym; a.pct = +v; }
+      else if (t === 'time') { if (!/^\d{1,2}:\d{2}$/.test(v)) return toast('Uhrzeit wie 15:55.'); a.at = v; a.label = 'Zeitalarm'; }
+      S.alerts.push(a); save(); renderAlerts(); $('alVal').value = '';
+    });
+    $('alertList').addEventListener('click', (ev) => {
+      const del = ev.target.getAttribute('data-del'), re = ev.target.getAttribute('data-rearm');
+      if (del) S.alerts = S.alerts.filter((a) => a.id !== del);
+      if (re) { const a = S.alerts.find((x) => x.id === re); if (a) { delete a.rang; delete a.lastRang; } }
+      save(); renderAlerts();
+    });
+    $('notifyBtn').addEventListener('click', async () => {
+      if (!('Notification' in window)) return toast('Dieser Browser kann keine Mitteilungen. Auf dem iPhone: Seite zum Home Bildschirm hinzufügen.');
+      const p = await Notification.requestPermission(); renderAlerts();
+      toast(p === 'granted' ? 'Mitteilungen sind an.' : 'Mitteilungen sind aus.');
+    });
+    function addPlanAlerts(plan) {
+      S.alerts = S.alerts.filter((a) => !(a.fromPlan && a.symbol === plan.symbol) && a.id !== 'plan-flat');
+      S.alerts.push({ id: `p-${plan.symbol}-stop`, type: 'stop', symbol: plan.symbol, price: plan.stop, date: plan.date, fromPlan: true });
+      S.alerts.push({ id: `p-${plan.symbol}-target`, type: 'target', symbol: plan.symbol, price: plan.target, date: plan.date, fromPlan: true });
+      S.alerts.push({ id: 'plan-flat', type: 'time', at: plan.flatBy, label: 'Glattstellen vor Schluss', beforeClose: true, date: plan.date });
+      save(); renderAlerts();
+    }
+    async function checkAlerts() {
+      const clock = E.marketClock(Date.now());
+      const active = S.alerts.filter((a) => !a.date || a.date === clock.date);
+      if (!active.length) return;
+      const syms = [...new Set(active.filter((a) => a.symbol && !a.rang).map((a) => a.symbol))];
+      let q = {};
+      if (syms.length && (clock.open || clock.state === 'post')) { try { q = await quotes(syms); } catch (e) { return; } }
+      let changed = false;
+      for (const a of active) {
+        const msg = E.evaluateAlert(a, { clock, quotes: q });
+        if (msg) {
+          const stamp = new Date().toLocaleString('sv-SE', { timeZone: 'America/New_York' }).slice(0, 16);
+          a.rang = stamp.slice(11); a.lastRang = stamp; changed = true;
+          notify('Alarm', msg);
+        }
+      }
+      if (changed) { save(); renderAlerts(); }
+    }
+
+    // ---------- Scanner ----------
+    $('universe').value = S.universe;
+    $('minPrice').value = S.config.min_price;
+    $('minVol').value = S.config.min_volume;
+    function scanProgress(done, total) {
+      $('scanProg').hidden = false;
+      $('scanProg').firstElementChild.style.width = `${Math.round((done / total) * 100)}%`;
+      $('scanInfo').textContent = `Abgerufen ${done} von ${total}…`;
+    }
+    function hitRow(h, extra) {
+      return `<li class="hit"><span class="s">${esc(h.symbol)}</span><div class="grow"><div>${usd(h.price)} <span class="${h.changePct >= 0 ? 'up' : 'down'} small">${signPct(h.changePct)}</span></div><div class="small muted">${extra || ''}</div></div><button class="btn ghost" data-news="${esc(h.symbol)}">News</button><button class="btn" data-trade="${esc(h.symbol)}">Trade</button></li>`;
+    }
+    $('scanDaily').addEventListener('click', async () => {
+      const syms = parseSyms($('universe').value);
+      S.universe = $('universe').value; save();
+      if (!syms.length) return toast('Erst Werte eintragen.');
+      const minPrice = +$('minPrice').value || 0, minVolume = +$('minVol').value || 0;
+      $('scanResults').innerHTML = '';
+      const btn = $('scanDaily'); btn.disabled = true;
+      const data = await charts(syms, '3mo', '1d', scanProgress);
+      btn.disabled = false; $('scanProg').hidden = true;
+      const now = Date.now();
+      let fetched = 0, usable = 0, liquid = 0; const hits = []; let asOf = '';
+      for (const s of syms) {
+        const r = data[s]; if (!r || !r.bars) continue; fetched++;
+        const res = E.scanDailySymbol(r.bars, now, { minPrice, minVolume });
+        if (!res.usable) continue; usable++;
+        if (res.liquid) liquid++;
+        asOf = asOf > res.asOf ? asOf : res.asOf;
+        if (res.setups.length) hits.push({ symbol: s, ...res });
+      }
+      hits.sort((a, b) => b.dollarVolume - a.dollarVolume);
+      S.watch = hits.map((h) => h.symbol); save();
+      const partial = fetched < syms.length ? ` (${syms.length - fetched} ohne Daten)` : '';
+      $('scanInfo').textContent = `Abgerufen ${fetched} von ${syms.length}${partial}, ${liquid} liquide, ${hits.length} Treffer. Schlusskurse bis ${asOf || '–'}.`;
+      const groups = Object.keys(E.SETUP_LABELS).filter((k) => k !== 'orb');
+      $('scanResults').innerHTML = groups.map((g) => {
+        const list = hits.filter((h) => h.setups.includes(g));
+        if (!list.length) return '';
+        return `<div class="card"><h2>${esc(E.SETUP_LABELS[g])} <span class="right">${list.length}</span></h2><ul class="list">${list.map((h) => hitRow(h, `RSI ${num(h.rsi, 0)} · Umsatz ${big(h.dollarVolume)}`)).join('')}</ul></div>`;
+      }).join('') || '<div class="card muted">Kein Chart erfüllt heute eine Regel.</div>';
+    });
+    $('scanOrb').addEventListener('click', async () => {
+      const syms = parseSyms($('universe').value);
+      if (!syms.length) return toast('Erst Werte eintragen.');
+      const replay = $('scanReplay').checked;
+      const clock = E.marketClock(Date.now());
+      if (!replay && (clock.state === 'closed' || clock.state === 'pre')) return toast(`Die Börse ist zu (${clock.reason}). Haken bei „letzter Handelstag“ setzen.`);
+      const btn = $('scanOrb'); btn.disabled = true;
+      $('scanResults').innerHTML = '';
+      const data = await charts(syms, replay ? '5d' : '1d', '5m', scanProgress);
+      btn.disabled = false; $('scanProg').hidden = true;
+      let fetched = 0, usable = 0; const hits = []; let dateUsed = '';
+      for (const s of syms) {
+        const r = data[s]; if (!r || !r.bars || !r.bars.length) continue; fetched++;
+        if (r.meta && r.meta.price < (+$('minPrice').value || 0)) continue;
+        const nowMs = replay ? replayNow(r.bars, 5) : Date.now();
+        const res = E.entryCheck(r.bars, { interval: 5, nowMs, config: S.config, orMinutes: S.config.or_minutes });
+        if (['waiting', 'triggered', 'expired'].includes(res.status)) usable++;
+        dateUsed = res.clock.date;
+        if (res.status === 'triggered') hits.push({ symbol: s, price: res.price, time: res.time, orHigh: res.orHigh, orLow: res.orLow, overPct: res.overPct, changePct: r.meta.prevClose ? (res.price / r.meta.prevClose - 1) * 100 : null });
+      }
+      hits.sort((a, b) => a.time - b.time);
+      $('scanInfo').textContent = `Abgerufen ${fetched} von ${syms.length}, ${usable} brauchbar. ${hits.length} schlossen über ihrem Spannenhoch (${dateUsed}). Ein späterer Treffer liegt näher am Kurs jetzt.`;
+      $('scanResults').innerHTML = `<div class="card"><h2>${esc(E.SETUP_LABELS.orb)} <span class="right">${hits.length}</span></h2><ul class="list">${
+        hits.map((h) => hitRow(h, `${E.fmtMin(h.time)} · Spanne ${num(h.orLow)} bis ${num(h.orHigh)} · ${signPct(h.overPct)} drüber`)).join('') || '<li class="muted">Kein Ausbruch.</li>'}</ul></div>`;
+    });
+    $('scanResults').addEventListener('click', (ev) => {
+      const t = ev.target.getAttribute('data-trade'), n = ev.target.getAttribute('data-news');
+      if (t) { $('tSym').value = t; showTab('trade'); $('tCheck').click(); }
+      if (n) { $('newsSyms').value = n; showTab('news'); $('newsRun').click(); }
+    });
+    /** Zeitpunkt kurz nach dem Schluss des letzten Handelstags in den Kerzen. */
+    function replayNow(rawBars, iv) {
+      const bars = E.regularOnly(E.normalizeBars(rawBars, iv));
+      if (!bars.length) return Date.now();
+      const last = bars[bars.length - 1];
+      return (last.t + iv * 60) * 1000 + 60000;
+    }
+
+    // ---------- Trade: 1 Einstieg ----------
+    const T = S.trade;
+    $('tSym').value = T.symbol || '';
+    $('tIv').value = String(T.interval || 5);
+    $('tSetup').value = T.setup || 'orb';
+    $('tLevel').value = T.level || '';
+    $('tVolX').value = T.minVolX || '';
+    $('tLevelWrap').hidden = $('tSetup').value !== 'level';
+    $('tSetup').addEventListener('change', () => {
+      $('tLevelWrap').hidden = $('tSetup').value !== 'level';
+      if ($('tSetup').value === 'level' && $('xStop').value.startsWith('or-')) { $('xStop').value = 'pct'; $('xStopVal').value = '1'; syncStopVal(); }
+    });
+    const clockNow = E.marketClock(Date.now());
+    if (clockNow.state === 'closed' || clockNow.state === 'pre') { $('tReplay').checked = true; $('scanReplay').checked = true; }
+
+    function resetAfter(step) {
+      if (step <= 1) { T.plan = null; $('planOut').innerHTML = ''; }
+      if (step <= 2) { mem.tm = null; $('tmOut').innerHTML = ''; }
+      if (step <= 3) { mem.sizing = null; $('szOut').innerHTML = ''; }
+      if (step <= 4) { mem.risk = null; $('rkOut').innerHTML = ''; renderOrder(); }
+      save();
+    }
+
+    async function checkEntry(silent) {
+      const sym = parseSyms($('tSym').value)[0];
+      if (!sym) { if (!silent) toast('Ticker eingeben.'); return null; }
+      const iv = +$('tIv').value;
+      const setup = $('tSetup').value;
+      const level = setup === 'level' ? +String($('tLevel').value).replace(',', '.') : null;
+      if (setup === 'level' && !(level > 0)) { toast('Marke eingeben.'); return null; }
+      const minVolX = +String($('tVolX').value).replace(',', '.') || null;
+      const replay = $('tReplay').checked;
+      Object.assign(T, { symbol: sym, interval: iv, setup, level, minVolX });
+      if (!silent) $('entryOut').innerHTML = '<p class="muted">Lade Kerzen…</p>';
+      let r;
+      try { r = (await charts([sym], replay ? '5d' : '1d', iv === 1 ? '1m' : '5m'))[sym]; } catch (e) { r = { error: e.message }; }
+      if (!r || r.error || !r.bars) { $('entryOut').innerHTML = `<div class="status bad">Keine Daten: ${esc((r && r.error) || 'unbekannt')}</div>`; return null; }
+      const nowMs = replay ? replayNow(r.bars, iv) : Date.now();
+      const res = E.entryCheck(r.bars, { interval: iv, nowMs, level, minVolumeX: minVolX, config: S.config, orMinutes: S.config.or_minutes });
+      res.symbol = sym; res.name = r.meta && r.meta.name; res.replay = replay; res.nowMs = nowMs;
+      mem.entry = res; mem.bars = res.bars;
+      T.entry = { status: res.status, symbol: sym, date: res.clock.date, price: res.price, time: res.time, barStart: res.barStart, orHigh: res.orHigh, orLow: res.orLow, level: res.level, interval: iv, setup, replay };
+      save();
+      renderEntry();
+      return res;
+    }
+    function renderEntry() {
+      const res = mem.entry; if (!res) return;
+      const cls = res.status === 'triggered' ? 'ok' : res.status === 'waiting' || res.status === 'forming' ? 'wait' : 'bad';
+      let html = `<div class="small muted">${esc(res.symbol)}${res.name ? ' · ' + esc(res.name) : ''} · ${esc(res.clock.date)}${res.replay ? ' (Rückblick)' : ''} · ${res.interval} Minuten Kerzen von Yahoo, frei, kann verzögert sein</div>`;
+      if (res.orHigh != null) html += `<div class="small" style="margin-top:4px">Eröffnungsspanne 9:30 bis ${E.fmtMin(570 + res.orMinutes)}: Hoch <b>${usd(res.orHigh)}</b>, Tief <b>${usd(res.orLow)}</b> (${res.rangeCount} von ${res.need} Kerzen)${res.setup === 'level' ? ` · Marke <b>${usd(res.level)}</b>` : ''}</div>`;
+      html += `<div class="status ${cls}">${esc(res.text)}</div>`;
+      if (res.status === 'triggered') {
+        html += `<p class="small">${res.replay ? 'Rückblick: so wäre es gelaufen.' : 'Das ist der Moment zum Einstieg, falls du den Trade nimmst. Es wurde nichts gekauft.'}${res.volX != null ? ` Volumen der Kerze: ${num(res.volX, 2)} × Schnitt der Spanne.` : ''}${!res.replay && res.lateBars > 0 ? ` <b>Achtung:</b> das Signal ist ${res.lateBars} Kerze(n) alt. Ein später Einstieg ist ein anderer Trade.` : ''} Weiter: Stopp und Ziel festlegen, bevor gekauft wird.</p>`;
+      }
+      if (res.status === 'waiting' && res.forming) html += `<p class="small muted">Die ${E.fmtMin(res.forming.min)} Kerze bildet sich noch (${usd(res.forming.c)} bisher). Sie zählt erst, wenn sie schließt.</p>`;
+      html += entryChart(res, S.trade.plan);
+      $('entryOut').innerHTML = html;
+    }
+    function entryChart(res, plan) {
+      const bars = res.bars || [];
+      if (bars.length < 2) return '';
+      const W = 640, H = 220, P = { l: 8, r: 54, t: 10, b: 20 };
+      const closeMin = E.closeMinOf(res.clock.date);
+      const vals = bars.flatMap((b) => [b.h, b.l]);
+      [res.orHigh, res.orLow, res.level, plan && plan.stop, plan && plan.target].forEach((v) => { if (v != null) vals.push(v); });
+      let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+      const x = (m) => P.l + ((m - 570) / (closeMin - 570)) * (W - P.l - P.r);
+      const y = (v) => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
+      const iv = res.interval;
+      let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kursverlauf heute">`;
+      if (res.orHigh != null) s += `<rect x="${x(570)}" y="${y(res.orHigh)}" width="${x(570 + res.orMinutes) - x(570)}" height="${Math.max(1, y(res.orLow) - y(res.orHigh))}" fill="#1B64B0" opacity="0.10"/>`;
+      const hline = (v, col, label, dash) => (v == null ? '' : `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="${col}" stroke-width="1.2" ${dash ? 'stroke-dasharray="4 4"' : ''}/><text x="${W - P.r + 4}" y="${y(v) + 4}" font-size="11" fill="${col}" font-family="Inter">${label}</text>`);
+      s += hline(res.level, '#1B64B0', num(res.level), true);
+      if (plan) { s += hline(plan.stop, '#B5533C', num(plan.stop), true); s += hline(plan.target, '#3F8F4F', num(plan.target), true); }
+      for (const h of [600, 660, 720, 780, 840, 900]) if (h < closeMin) s += `<text x="${x(h)}" y="${H - 5}" font-size="10" fill="#8A8069" text-anchor="middle" font-family="Inter">${E.fmtMin(h)}</text>`;
+      const bw = Math.max(1, (x(570 + iv) - x(570)) * 0.7);
+      for (const b of bars) {
+        const col = b.c >= b.o ? '#3F8F4F' : '#B5533C';
+        const cx = x(b.min + iv / 2);
+        s += `<line x1="${cx}" x2="${cx}" y1="${y(b.h)}" y2="${y(b.l)}" stroke="${col}" stroke-width="1"/>`;
+        s += `<rect x="${cx - bw / 2}" y="${y(Math.max(b.o, b.c))}" width="${bw}" height="${Math.max(0.8, Math.abs(y(b.o) - y(b.c)))}" fill="${col}"/>`;
+      }
+      if (res.status === 'triggered') s += `<circle cx="${x(res.time)}" cy="${y(res.price)}" r="5" fill="none" stroke="#2A2417" stroke-width="2"/>`;
+      return s + '</svg>';
+    }
+    $('tCheck').addEventListener('click', async () => {
+      resetAfter(1);
+      const res = await checkEntry(false);
+      if (res && res.status === 'triggered') { $('xTgtVal').value ||= '2'; }
+    });
+    $('tWatch').addEventListener('click', async () => {
+      if (mem.watchTimer) { clearInterval(mem.watchTimer); mem.watchTimer = null; $('tWatch').textContent = 'Beobachten'; toast('Beobachtung beendet.'); return; }
+      if ($('tReplay').checked) return toast('Beobachten geht nur live, nicht im Rückblick.');
+      const res = await checkEntry(false);
+      if (!res) return;
+      if (['triggered', 'expired', 'closed'].includes(res.status)) return toast('Nichts zu beobachten: ' + res.status);
+      $('tWatch').textContent = 'Beobachtung stoppen';
+      toast(`Beobachte ${res.symbol} jede Minute, solange die Seite offen ist.`);
+      mem.watchTimer = setInterval(async () => {
+        const r = await checkEntry(true);
+        if (r && r.status === 'triggered') { notify(`${r.symbol} ausgelöst`, r.text); clearInterval(mem.watchTimer); mem.watchTimer = null; $('tWatch').textContent = 'Beobachten'; }
+        if (r && r.status === 'expired') { notify(`${r.symbol} abgelaufen`, r.text); clearInterval(mem.watchTimer); mem.watchTimer = null; $('tWatch').textContent = 'Beobachten'; }
+      }, 60000);
+    });
+    $('tManualGo').addEventListener('click', async () => {
+      const px = +String($('tManual').value).replace(',', '.');
+      if (!(px > 0)) return toast('Einstiegskurs eingeben.');
+      let res = mem.entry;
+      if (!res || res.symbol !== parseSyms($('tSym').value)[0]) res = await checkEntry(false);
+      if (!res) return;
+      const done = (res.bars || []).filter((b) => b.min + res.interval <= res.clock.ny.min);
+      const last = done[done.length - 1];
+      T.entry = { status: 'manual', symbol: res.symbol, date: res.clock.date, price: px, time: last ? last.min + res.interval : res.clock.ny.min, barStart: last ? last.min : null, orHigh: res.orHigh, orLow: res.orLow, level: res.level, interval: res.interval, setup: res.setup, replay: res.replay };
+      save(); resetAfter(1);
+      toast(`Plane vorab mit Einstieg ${usd(px)}.`);
+    });
+
+    // ---------- Trade: 2 Ausstieg ----------
+    function syncStopVal() {
+      const v = $('xStop').value;
+      $('xStopValWrap').hidden = v === 'or-mid' || v === 'or-low';
+      $('xStopVal').placeholder = v === 'pct' ? '1' : v === 'atr' ? '1.5' : '358.00';
+    }
+    $('xStop').addEventListener('change', syncStopVal); syncStopVal();
+    $('xPlan').addEventListener('click', () => {
+      const en = T.entry;
+      if (!en || !(en.price > 0) || !['triggered', 'manual'].includes(en.status)) {
+        $('planOut').innerHTML = '<div class="status bad">Noch kein Einstieg. Erst Schritt 1 auslösen lassen oder vorab einen Einstiegskurs nehmen.</div>';
+        return;
+      }
+      const stopRule = $('xStop').value;
+      const plan = E.planExit({
+        symbol: en.symbol, date: en.date, entry: en.price, entryTime: en.time, entryBarStart: en.barStart, orHigh: en.orHigh, orLow: en.orLow,
+        setup: en.setup, stopRule, stopValue: +String($('xStopVal').value).replace(',', '.') || null,
+        targetRule: $('xTgt').value, targetValue: +String($('xTgtVal').value).replace(',', '.') || 2,
+        bars: mem.bars || [], flatBy: S.config.flat_by, interval: en.interval,
+      });
+      resetAfter(2);
+      if (!plan.ok) { T.plan = null; save(); $('planOut').innerHTML = `<div class="status bad">${esc(plan.reason)}</div>`; return; }
+      T.plan = plan; save();
+      $('planOut').innerHTML = `<dl class="kv" style="margin-top:8px">
+        <dt>Einstieg</dt><dd>${usd(plan.entry)}${plan.entryTime != null ? ` um ${E.fmtMin(plan.entryTime)}` : ''}</dd>
+        <dt>Stopp</dt><dd class="down">${usd(plan.stop)} <span class="small muted" style="font-weight:400">${esc(plan.stopText)}</span></dd>
+        <dt>Ziel</dt><dd class="up">${usd(plan.target)} <span class="small muted" style="font-weight:400">${esc(plan.targetText)}</span></dd>
+        <dt>Risiko je Stück</dt><dd>${usd(plan.risk)} (${num(plan.riskPct)} % vom Einstieg)</dd>
+        <dt>Chance zu Risiko</dt><dd>${num(plan.rewardRisk, 2)}</dd>
+        <dt>Glattstellen bis</dt><dd>${esc(plan.flatBy)} New York, egal ob Gewinn oder Verlust</dd>
+      </dl>
+      <p class="small muted">Ein Stopp ist ein Plan, keine Garantie: eine Lücke oder ein schneller Markt kann darunter füllen. Den Stopp nie weiter weg schieben, wenn der Trade läuft.</p>
+      <div class="row"><button class="btn ghost" id="planAlerts">Alarme für Stopp, Ziel und Glattstellen</button></div>`;
+      $('planAlerts').onclick = () => { addPlanAlerts(plan); toast('Drei Alarme angelegt: Stopp, Ziel, Glattstellen.'); };
+      if (mem.entry) renderEntry();
+    });
+
+    // ---------- Trade: 3 Zeitmaschine ----------
+    $('tmRun').addEventListener('click', async () => {
+      const plan = T.plan;
+      if (!plan) { $('tmOut').innerHTML = '<div class="status bad">Erst den Ausstieg planen.</div>'; return; }
+      $('tmOut').innerHTML = '<p class="muted">Lade 60 Tage 5 Minuten Kerzen…</p>';
+      let r;
+      try { r = (await charts([plan.symbol], '60d', '5m'))[plan.symbol]; } catch (e) { r = { error: e.message }; }
+      if (!r || r.error) { $('tmOut').innerHTML = `<div class="status bad">Keine Daten: ${esc((r && r.error) || '')}</div>`; return; }
+      const p = { ...plan };
+      if (p.entryBarStart != null && (p.entryBarStart - 570) % 5 !== 0) p.entryBarStart = 570 + Math.floor((p.entryBarStart - 570) / 5) * 5; // 1 Minute Einstieg auf das 5 Minuten Raster
+      await new Promise((ok) => setTimeout(ok, 20));
+      const replays = Math.min(50000, Math.max(1000, +$('tmN').value || 10000));
+      const seed = +$('tmSeed').value || 19;
+      const res = E.timeMachine(r.bars, p, { replays, seed, untilMin: plan.flatMin, config: S.config, orMinutes: S.config.or_minutes });
+      mem.tm = res; resetAfter(3);
+      if (!res.ok) { $('tmOut').innerHTML = `<div class="status bad">${esc(res.reason)}</div>`; return; }
+      const m = res.mc, h = res.history, pc = (x) => num(x * 100, 1) + ' %';
+      $('tmOut').innerHTML = `<p class="small">${E.num(m.replays, 0)} Wiederholungen von ${esc(m.fromText)} bis ${esc(m.untilText)} (${m.steps} Kerzen), Seed ${m.seed}, aus ${res.sessions} vollen Handelstagen.</p>
+        <div class="stats">
+          <div class="stat"><div class="v up">${pc(m.targetFirst)}</div><div class="l">Ziel zuerst</div></div>
+          <div class="stat"><div class="v down">${pc(m.stopFirst)}</div><div class="l">Stopp zuerst</div></div>
+          <div class="stat"><div class="v">${pc(m.neither)}</div><div class="l">keins bis ${esc(m.untilText)}</div></div>
+          <div class="stat"><div class="v">${pc(m.green)}</div><div class="l">im Plus</div></div>
+        </div>
+        ${fanChart(m, plan)}
+        <p class="small">Kurs um ${esc(m.untilText)}: Median ${usd(m.median)}, 90 % zwischen ${usd(m.p5)} und ${usd(m.p95)}. Durchschnitt ${m.avgR >= 0 ? '+' : ''}${num(m.avgR, 3)} R.</p>
+        <p class="small">Geschichte: dieselbe Regel löste an ${h.fired} von ${h.sessions} echten Tagen aus: ${h.target} Ziel, ${h.stop} Stopp, ${h.neither} keins. Durchschnitt ${h.avgR >= 0 ? '+' : ''}${num(h.avgR, 3)} R.</p>
+        <div class="verdict">${esc(res.verdict.text)}</div>
+        ${res.verdict.lines.map((l) => `<p class="small" style="margin:2px 0">${esc(l)}</p>`).join('')}
+        <p class="small muted">Gebaut aus den letzten 60 Tagen, keine Vorhersage. Zahlen, News und Handelsstopps können Dinge tun, die diese 60 Tage nie getan haben. Ein Bruch durch den Stopp zählt hier als minus 1 R, echt kann es schlechter sein.</p>`;
+    });
+    function fanChart(m, plan) {
+      const W = 640, H = 200, P = { l: 8, r: 54, t: 8, b: 8 };
+      const b = m.bands; const n = b.length - 1;
+      let lo = Math.min(plan.stop, ...b.map((x) => x.p5)), hi = Math.max(plan.target, ...b.map((x) => x.p95));
+      const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+      const x = (i) => P.l + (i / n) * (W - P.l - P.r);
+      const y = (v) => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
+      const area = (a, c) => `M${b.map((p, i) => `${x(i)},${y(p[a])}`).join(' L')} L${b.map((p, i) => `${x(n - i)},${y(b[n - i][c])}`).join(' L')} Z`;
+      const hline = (v, col, label) => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="${col}" stroke-dasharray="4 4"/><text x="${W - P.r + 4}" y="${y(v) + 4}" font-size="11" fill="${col}" font-family="Inter">${label}</text>`;
+      return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Fächer der simulierten Kurse">
+        <path d="${area('p95', 'p5')}" fill="#1B64B0" opacity="0.12"/>
+        <path d="${area('p75', 'p25')}" fill="#1B64B0" opacity="0.22"/>
+        <polyline points="${b.map((p, i) => `${x(i)},${y(p.p50)}`).join(' ')}" fill="none" stroke="#1B64B0" stroke-width="1.8"/>
+        ${hline(plan.target, '#3F8F4F', num(plan.target))}${hline(plan.stop, '#B5533C', num(plan.stop))}${hline(plan.entry, '#8A8069', num(plan.entry))}
+      </svg><div class="small muted">Fächer: dunkel die mittleren 50 %, hell 90 % der Wiederholungen, Linie der Median.</div>`;
+    }
+
+    // ---------- Trade: 4 Groesse ----------
+    $('szRun').addEventListener('click', async () => {
+      const plan = T.plan;
+      if (!plan) { $('szOut').innerHTML = '<div class="status bad">Erst den Ausstieg planen.</div>'; return; }
+      let fresh = null;
+      try { const q = await quotes([plan.symbol]); if (q[plan.symbol]) fresh = { price: q[plan.symbol].price, asOfMs: q[plan.symbol].time || Date.now() }; } catch (e) { /* ohne frischen Kurs */ }
+      const res = E.sizePosition(plan, S.config, { freshPrice: fresh, cash: S.depot.cash });
+      mem.sizing = res; mem.freshPrice = fresh; resetAfter(4);
+      let html = '';
+      if (res.limits) {
+        html += `<div class="scroll"><table><tr><th>Grenze</th><th>Rechnung</th><th class="r">Stück</th></tr>${res.limits.map((l) => `<tr><td>${esc(l.label)}</td><td class="small">${esc(l.math)}</td><td class="r">${l.decides ? `<b>${l.shares} (entscheidet)</b>` : l.shares}</td></tr>`).join('')}</table></div>`;
+        html += `<p class="small muted">Gerechnet ab ${usd(res.entry)} (${esc(res.entryNote)}${fresh ? `, Yahoo Kurs ${usd(fresh.price)}` : ''}).</p>`;
+      }
+      if (!res.ok) html += `<div class="status bad">${esc(res.reason)}</div>`;
+      else {
+        html += `<div class="status ok">${res.qty} Stück = ${usd(res.notional)}. Max Verlust am Stopp: ${res.qty} × ${num(res.risk)} = ${usd(res.maxLoss)}.</div>
+          <p class="small muted">Ein Stopp ist eine Order, kein Versprechen: in einem schnellen Markt kann er tiefer füllen. Es wurde nichts platziert.</p>
+          <details><summary>Order im Format von Alpaca</summary><pre>${esc(JSON.stringify(res.order, null, 2))}</pre></details>`;
+      }
+      $('szOut').innerHTML = html;
+    });
+
+    // ---------- Trade: 5 Risiko ----------
+    const orderKey = (o) => JSON.stringify([o.symbol, o.side, o.qty, o.type, o.take_profit_limit_price, o.stop_loss_stop_price, o.limit_price || null]);
+    $('rkRun').addEventListener('click', async () => {
+      const sz = mem.sizing;
+      if (!sz || !sz.ok) { $('rkOut').innerHTML = '<div class="status bad">Erst eine gültige Positionsgröße berechnen.</div>'; return; }
+      let fp = null;
+      try { const q = await quotes([sz.order.symbol]); if (q[sz.order.symbol]) fp = q[sz.order.symbol].price; } catch (e) { /* ohne */ }
+      const res = E.riskCheck(sz.order, S.config, { portfolio: S.depot, today: todayStats() }, { freshPrice: fp });
+      res.key = orderKey(sz.order);
+      mem.risk = res;
+      $('rkOut').innerHTML = `<div class="status ${res.pass ? 'ok' : 'bad'}">${res.verdict}${res.pass ? ': alle Regeln eingehalten. Das ist eine Regelprüfung, keine Empfehlung.' : ': ' + esc(res.failed.map((f) => f.label).join(', '))}</div>
+        <ul class="list">${res.checks.map((c) => `<li class="hit"><span class="${c.ok ? 'up' : 'down'}" style="font-weight:800;min-width:20px">${c.ok ? '✓' : '✕'}</span><div class="grow"><div class="t">${esc(c.label)}</div><div class="small muted">${esc(c.detail)}</div></div></li>`).join('')}</ul>`;
+      renderOrder();
+    });
+
+    // ---------- Trade: 6 Papierorder ----------
+    function renderOrder() {
+      const sz = mem.sizing, rk = mem.risk;
+      if (!sz || !sz.ok || !rk || !rk.pass || rk.key !== orderKey(sz.order)) {
+        $('orderOut').innerHTML = '<p class="muted small">Erst wenn die Risiko Prüfung PASS sagt, erscheint hier das Ticket.</p>';
+        return;
+      }
+      const o = sz.order;
+      $('orderOut').innerHTML = `<dl class="kv">
+          <dt>Kauf</dt><dd>${o.qty} × ${esc(o.symbol)} ${o.type === 'market' ? 'zum Marktpreis' : 'Limit ' + usd(+o.limit_price)}, nur heute</dd>
+          <dt>Stopp Loss</dt><dd class="down">${usd(+o.stop_loss_stop_price)}</dd>
+          <dt>Take Profit</dt><dd class="up">${usd(+o.take_profit_limit_price)}</dd>
+          <dt>Max Verlust am Stopp</dt><dd>${usd(sz.maxLoss)}</dd>
+          <dt>Konto</dt><dd>Papierdepot (kein echtes Geld)</dd>
+        </dl>
+        <p class="small muted">${esc(o.why)}</p>
+        <label style="margin-top:8px">Zum Bestätigen „ja“ tippen <input id="ordYes" autocomplete="off" autocapitalize="none" style="max-width:160px"></label>
+        <div class="row"><button class="btn go" id="ordGo" disabled>Papierorder senden</button></div>`;
+      $('ordYes').oninput = () => { $('ordGo').disabled = $('ordYes').value.trim().toLowerCase() !== 'ja'; };
+      $('ordGo').onclick = placeOrder;
+    }
+    async function placeOrder() {
+      const sz = mem.sizing, rk = mem.risk; const o = sz.order;
+      if (Date.now() - rk.at > 10 * 60000) { toast('Die Risiko Prüfung ist älter als 10 Minuten. Bitte neu prüfen.'); mem.risk = null; renderOrder(); return; }
+      $('ordGo').disabled = true;
+      let fill = o.type === 'limit' ? +o.limit_price : null;
+      try { const q = await quotes([o.symbol]); if (o.type === 'market' && q[o.symbol]) fill = q[o.symbol].price; } catch (e) { /* unten */ }
+      if (!(fill > 0)) { toast('Kein Kurs für die Ausführung.'); $('ordGo').disabled = false; return; }
+      fill = E.round2(fill);
+      if (fill <= +o.stop_loss_stop_price || fill >= +o.take_profit_limit_price) { toast(`Kurs ${usd(fill)} liegt schon außerhalb von Stopp oder Ziel. Nicht gekauft.`); return; }
+      const qty = +o.qty;
+      if (qty * fill > S.depot.cash) { toast('Nicht genug Bargeld im Papierdepot.'); return; }
+      const now = Date.now();
+      const pos = { id: 'p' + now.toString(36), symbol: o.symbol, qty, entry: fill, stop: +o.stop_loss_stop_price, target: +o.take_profit_limit_price, openedAt: now, date: todayNY(), maxLoss: E.round2(qty * (fill - +o.stop_loss_stop_price)), setup: o.plan.setup };
+      S.depot.cash = E.round2(S.depot.cash - qty * fill);
+      S.depot.positions.push(pos);
+      S.depot.log.push({ date: todayNY(), at: now, side: 'buy', symbol: o.symbol, qty, price: fill, maxLoss: pos.maxLoss, confirm: $('ordYes').value.trim() });
+      save();
+      mem.risk = null; mem.sizing = null;
+      $('orderOut').innerHTML = `<div class="status ok">Gekauft im Papierdepot: ${qty} ${esc(o.symbol)} zu ${usd(fill)}. Stopp ${usd(pos.stop)}, Ziel ${usd(pos.target)}.</div>`;
+      $('szOut').innerHTML = ''; $('rkOut').innerHTML = '';
+      if (T.plan) addPlanAlerts(T.plan);
+      renderDepot();
+    }
+
+    // ---------- News ----------
+    function defaultNewsSyms() {
+      return [...new Set([...S.depot.positions.map((p) => p.symbol), ...(T.symbol ? [T.symbol] : []), ...S.watch.slice(0, 10)])];
+    }
+    $('newsSyms').value = defaultNewsSyms().join(' ');
+    $('newsRun').addEventListener('click', async () => {
+      const syms = parseSyms($('newsSyms').value).slice(0, 15);
+      if (!syms.length) return toast('Ticker eingeben.');
+      $('newsOut').innerHTML = '<div class="card muted">Lade News…</div>';
+      let j, q = {};
+      try { [j, q] = await Promise.all([api('market-news', { symbols: syms.join(',') }), quotes(syms).catch(() => ({}))]); }
+      catch (e) { $('newsOut').innerHTML = `<div class="card status bad">${esc(e.message)}</div>`; return; }
+      const showAll = $('newsAll').checked;
+      const now = Date.now();
+      for (const k of Object.keys(S.newsSeen)) if (now - S.newsSeen[k] > 30 * 864e5) delete S.newsSeen[k];
+      const nyFmt = new Intl.DateTimeFormat('de-DE', { timeZone: 'America/New_York', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      let newCount = 0;
+      const cards = syms.map((s) => {
+        const items = j.items.filter((i) => i.symbol === s);
+        const qq = q[s];
+        const ch = qq && qq.prevClose ? (qq.price / qq.prevClose - 1) * 100 : null;
+        const moving = ch != null && Math.abs(ch) >= 3;
+        const rows = items.filter((i) => showAll || !S.newsSeen[i.id]).slice(0, 15).map((i) => {
+          const isNew = !S.newsSeen[i.id]; if (isNew) newCount++;
+          let chips = isNew ? '<span class="chip new">neu</span>' : '';
+          if (i.kind === 'filing') {
+            chips += `<span class="chip">${esc(i.form)}</span>`;
+            for (const it of i.items) if (E.IMPORTANT_8K[it]) chips += `<span class="chip imp">! ${esc(it)} ${esc(E.IMPORTANT_8K[it])}</span>`;
+          } else for (const tg of E.tagHeadline(i.title + ' ' + (i.summary || ''))) chips += `<span class="chip">${esc(tg)}</span>`;
+          return `<li><div class="small muted">${i.time ? nyFmt.format(new Date(i.time)) + ' NY' : ''} · ${esc(i.source)}</div><div class="t"><a href="${esc(i.link)}" target="_blank" rel="noopener">${esc(i.title)}</a></div><div>${chips}</div></li>`;
+        }).join('');
+        return `<div class="card"><h2>${esc(s)} <span class="right">${qq ? `${usd(qq.price)} <span class="${ch >= 0 ? 'up' : 'down'}">${signPct(ch)}</span> gegen gestern` : ''}${moving ? ' <span class="chip mov">BEWEGT SICH</span>' : ''}</span></h2>
+          ${moving && !items.length ? '<p class="small">Bewegung ohne Schlagzeile: auch das ist eine Info.</p>' : ''}
+          <ul class="list">${rows || '<li class="muted small">Nichts Neues.</li>'}</ul></div>`;
+      });
+      for (const i of j.items) S.newsSeen[i.id] = S.newsSeen[i.id] || now;
+      save();
+      const errs = Object.entries(j.errors || {}).map(([k, v]) => `${k}: ${v}`);
+      $('newsInfo').innerHTML = `${newCount} neue Einträge. ${[...(j.notes || []), ...errs].map(esc).join(' ')}`;
+      $('newsOut').innerHTML = cards.join('') + '<p class="small muted">Nur was veröffentlicht wurde und wie weit der Kurs von gestern weg ist. Keine Vorhersage. Steht eine Quartalszahl innerhalb des Trades an, kann der Kurs über Nacht über jeden Stopp springen.</p>';
+    });
+
+    // ---------- Zahlen ----------
+    $('fRun').addEventListener('click', async () => {
+      const sym = parseSyms($('fSym').value)[0];
+      if (!sym) return toast('Ticker eingeben.');
+      $('factsOut').innerHTML = '<div class="card muted">Lade SEC Daten…</div>';
+      let j;
+      try { j = await api('sec-facts', { symbol: sym, quarters: $('fQ').value }); } catch (e) { j = { ok: false, error: e.message }; }
+      if (!j.ok) { $('factsOut').innerHTML = `<div class="card"><div class="status bad">${esc(j.error)}</div></div>`; return; }
+      const qn = (f) => { const m = f.match(/^CY(\d{4})Q(\d)$/); return m ? `Q${m[2]} ${m[1]}` : f; };
+      const g = (x) => (x == null ? '–' : `<span class="${x >= 0 ? 'up' : 'down'}">${signPct(x, 1)}</span>`);
+      const pm = (x) => (x == null ? '–' : num(x, 1) + ' %');
+      const q0 = j.quarters[0];
+      const summary = q0 ? `<p><b>${qn(q0.frame)}</b>${q0.end ? ` (bis ${esc(q0.end)})` : ''}: Umsatz ${big(q0.revenue)} (${signPct(q0.revenueYoY, 1)} gegen Vorjahr), Nettogewinn ${big(q0.netIncome)} (${signPct(q0.netIncomeYoY, 1)}), EPS verwässert ${q0.eps != null ? num(q0.eps) + ' $' : '–'} (${signPct(q0.epsYoY, 1)}). Bruttomarge ${pm(q0.grossMargin)}, operative Marge ${pm(q0.opMargin)}.</p>` : '';
+      $('factsOut').innerHTML = `<div class="card"><h2>${esc(j.name)} <span class="right">${esc(j.symbol)} · CIK ${esc(j.cik)}</span></h2>${summary}
+        <div class="scroll"><table><tr><th>Quartal</th><th class="r">Umsatz</th><th class="r">± Vorjahr</th><th class="r">Netto</th><th class="r">EPS</th><th class="r">Brutto</th><th class="r">Operativ</th><th class="r">Netto %</th></tr>
+        ${j.quarters.map((q) => `<tr><td>${qn(q.frame)}${q.derived ? ' <span class="chip">abgeleitet</span>' : ''}</td><td class="r">${big(q.revenue)}</td><td class="r">${g(q.revenueYoY)}</td><td class="r">${big(q.netIncome)}</td><td class="r">${q.eps != null ? num(q.eps) : '–'}</td><td class="r">${pm(q.grossMargin)}</td><td class="r">${pm(q.opMargin)}</td><td class="r">${pm(q.netMargin)}</td></tr>`).join('')}
+        </table></div>
+        <p class="small">Letzte vier Quartale: Umsatz ${big(j.ttm.revenue)}, Nettogewinn ${big(j.ttm.netIncome)}, EPS ${j.ttm.eps != null ? num(j.ttm.eps) + ' $' : '–'}.</p>
+        ${j.notes.map((n) => `<p class="small status wait" style="font-weight:400">${esc(n)}</p>`).join('')}
+        <p class="small">${j.latestReport ? `Neuestes ${esc(j.latestReport.form)} eingereicht ${esc(j.latestReport.filed)}: <a href="${esc(j.latestReport.link)}" target="_blank" rel="noopener">lesen</a>. ` : ''}${j.latestEarnings ? `Letzte Quartalsmeldung (8-K 2.02) vom ${esc(j.latestEarnings.filed)}: <a href="${esc(j.latestEarnings.index)}" target="_blank" rel="noopener">Ordner mit Pressemitteilung</a>.` : ''}</p>
+        <p class="small muted">Der nächste Termin steht nicht in den SEC Daten: in den News oder auf der Investor Relations Seite nachsehen. Ein Stopp schützt nicht vor einer Lücke über Nacht.</p></div>`;
+    });
+
+    // ---------- Kongress ----------
+    $('cMembers').value = S.members || '';
+    $('cRun').addEventListener('click', async () => {
+      S.members = $('cMembers').value.trim(); save();
+      const params = { member: S.members };
+      if ($('cSince').value) params.since = $('cSince').value;
+      else if (!S.members) params.since = E.ny(Date.now() - 14 * 864e5).date;
+      $('congressOut').innerHTML = '<div class="card muted">Lade Index des House Clerk…</div>';
+      let j;
+      try { j = await api('congress-trades', params); } catch (e) { j = { ok: false, error: e.message }; }
+      if (!j.ok) { $('congressOut').innerHTML = `<div class="card"><div class="status bad">${esc(j.error)}</div></div>`; return; }
+      const held = new Set(S.depot.positions.map((p) => p.symbol));
+      let newCount = 0;
+      const rows = j.filings.map((f) => {
+        const isNew = !S.congressSeen[f.docId]; if (isNew) newCount++;
+        return `<li><div class="t">${esc([f.prefix, f.first, f.last, f.suffix].filter(Boolean).join(' '))} <span class="muted">(${esc(f.district)})</span> ${isNew ? '<span class="chip new">neu</span>' : ''}</div>
+          <div class="small">eingereicht ${esc(f.filed)} · Dokument ${esc(f.docId)} · <a href="${esc(f.pdf)}" target="_blank" rel="noopener">PDF lesen</a></div></li>`;
+      }).join('');
+      for (const f of j.filings) S.congressSeen[f.docId] = S.congressSeen[f.docId] || f.filed;
+      save();
+      $('congressOut').innerHTML = `<div class="card"><h2>${j.count} Meldungen <span class="right">${j.year}${newCount ? ` · ${newCount} neu` : ''}</span></h2>
+        <ul class="list">${rows || '<li class="muted">Keine Meldungen gefunden.</li>'}</ul>
+        <p class="small muted">Im PDF stehen Wert, Kauf oder Verkauf, Datum und Betrag als Spanne (z. B. 1.000.001 bis 5.000.000 $). SP heißt Ehepartner, JT gemeinsam, DC Kind. Der Index wird etwa einmal täglich neu gebaut.${held.size ? ' Deine offenen Werte: ' + esc([...held].join(', ')) + '.' : ''}</p></div>`;
+    });
+
+    // ---------- Regeln ----------
+    const CFG_FIELDS = [
+      ['budget', 'Budget $', 'n'], ['cash_buffer_pct', 'Bargeld Puffer %', 'n'], ['max_loss_per_trade_usd', 'Max Verlust je Trade $', 'n'],
+      ['max_daily_loss_usd', 'Max Verlust am Tag $', 'n'], ['max_trades_per_day', 'Trades am Tag', 'n'], ['max_orders_per_day', 'Orders am Tag', 'n'],
+      ['max_position_pct', 'Max Position %', 'n'], ['max_order_usd', 'Max Order $', 'n'], ['min_order_usd', 'Min Order $', 'n'],
+      ['min_reward_risk', 'Min Chance zu Risiko', 'n'], ['no_entries_before', 'Kein Einstieg vor', 't'], ['no_entries_after', 'Kein Einstieg nach', 't'],
+      ['flat_by', 'Glattstellen bis', 't'], ['or_minutes', 'Spanne Minuten', 'n'], ['min_price', 'Scanner Mindestkurs $', 'n'],
+      ['min_volume', 'Scanner Mindestvolumen', 'n'], ['blocked', 'Sperrliste (Ticker)', 'l'], ['require_stop', 'Stopp Pflicht', 'b'],
+    ];
+    function renderCfg() {
+      $('cfgForm').innerHTML = `<div class="row">${CFG_FIELDS.map(([k, l, t]) => {
+        const v = S.config[k];
+        if (t === 'b') return `<label class="check"><input type="checkbox" data-cfg="${k}" ${v ? 'checked' : ''}> ${esc(l)}</label>`;
+        const val = t === 'l' ? (v || []).join(' ') : v;
+        return `<label>${esc(l)} <input class="${t === 'l' ? '' : 'n'}" data-cfg="${k}" data-t="${t}" value="${esc(val)}" ${t === 'n' ? 'inputmode="decimal"' : ''} ${t === 'l' ? 'autocapitalize="characters"' : ''}></label>`;
+      }).join('')}</div>`;
+    }
+    $('cfgSave').addEventListener('click', () => {
+      const c = { ...S.config };
+      let bad = '';
+      document.querySelectorAll('[data-cfg]').forEach((el) => {
+        const k = el.dataset.cfg, t = el.dataset.t;
+        if (el.type === 'checkbox') c[k] = el.checked;
+        else if (t === 'n') { const v = +String(el.value).replace(',', '.'); if (!(v >= 0)) bad = k; else c[k] = v; }
+        else if (t === 't') { if (!/^\d{1,2}:\d{2}$/.test(el.value.trim())) bad = k; else c[k] = el.value.trim().padStart(5, '0'); }
+        else if (t === 'l') c[k] = parseSyms(el.value);
+      });
+      if (bad) return toast(`Ungültiger Wert bei ${bad}.`);
+      if (c.or_minutes % 5 !== 0 || c.or_minutes < 5) return toast('Spanne muss ein Vielfaches von 5 Minuten sein.');
+      const budgetChanged = c.budget !== S.config.budget;
+      S.config = c; save(); renderDepot();
+      toast('Regeln gespeichert.' + (budgetChanged && !S.depot.positions.length && !S.depot.closed.length ? ' Depot Bargeld angepasst.' : ''));
+      if (budgetChanged && !S.depot.positions.length && !S.depot.closed.length) { S.depot.cash = c.budget; save(); renderDepot(); }
+    });
+    $('cfgReset').addEventListener('click', () => { S.config = { ...E.DEFAULT_CONFIG }; save(); renderCfg(); toast('Standardwerte geladen.'); });
+    $('depotReset').addEventListener('click', () => {
+      if (!confirm('Papierdepot wirklich zurücksetzen? Positionen und Verlauf werden gelöscht.')) return;
+      S.depot = { cash: S.config.budget, positions: [], closed: [], log: [] }; save(); renderDepot(); toast('Depot zurückgesetzt.');
+    });
+    $('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `trading-${todayNY()}.json`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    });
+
+    // ---------- Start ----------
+    renderClock(); renderCfg(); renderDepot(); renderAlerts();
+    if (T.plan && T.plan.ok) { $('planOut').innerHTML = `<p class="small muted">Letzter Plan: ${esc(T.plan.symbol)} Einstieg ${usd(T.plan.entry)}, Stopp ${usd(T.plan.stop)}, Ziel ${usd(T.plan.target)} (${esc(T.plan.date)}).</p>`; }
+    try { const t = sessionStorage.getItem('trader.tab'); if (t && $(`tab-${t}`)) showTab(t); } catch (e) { /* egal */ }
+    refreshDepot(true);
+    setInterval(renderClock, 20000);
+    setInterval(() => { if (document.visibilityState === 'visible') { checkAlerts(); if (S.depot.positions.length && E.marketClock(Date.now()).open) refreshDepot(true); } }, 60000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { renderClock(); checkAlerts(); } });
+    checkAlerts();
+  })();
+  </script>
+</body>
+</html>
